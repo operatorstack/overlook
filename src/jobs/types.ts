@@ -1,4 +1,10 @@
-export type JobStatus = "queued" | "ingesting" | "failed" | "ingested";
+export type JobStatus = "queued" | "ingesting" | "chunking" | "chunked" | "failed";
+
+export type ReviewUnit = {
+  path: string;
+  language: string;
+  content: string;
+};
 
 export type GitScanJob = {
   jobId: string;
@@ -10,4 +16,6 @@ export type GitScanJob = {
   workspacePath?: string;
   resolvedCommit?: string;
   lastError?: string;
+  reviewUnits?: ReviewUnit[];
+  reviewUnitScanTruncated?: boolean;
 };

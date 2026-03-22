@@ -22,7 +22,16 @@ export function createGitScanJob(input: {
 export function patchGitScanJob(
   jobId: string,
   patch: Partial<
-    Pick<GitScanJob, "status" | "agentNote" | "workspacePath" | "resolvedCommit" | "lastError">
+    Pick<
+      GitScanJob,
+      | "status"
+      | "agentNote"
+      | "workspacePath"
+      | "resolvedCommit"
+      | "lastError"
+      | "reviewUnits"
+      | "reviewUnitScanTruncated"
+    >
   >,
 ): GitScanJob | undefined {
   const existing = jobs.get(jobId);
