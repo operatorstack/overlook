@@ -30,6 +30,33 @@ Do not put secrets or ad hoc global metric schema changes in the agent package; 
 
 When implementing a ticket or paste block from `npm run cli -- prompt`, **start on a new branch** (`git checkout -b …` from a clean main). **Do not push** to the remote unless the operator explicitly asks.
 
+## Pull requests (GitHub CLI)
+
+When the operator wants a **pull request** (or right after a pushed feature branch), use the [**GitHub CLI**](https://cli.github.com/) (`gh`) so the **title and description are set deliberately**, not left to the web default.
+
+1. Push the branch: `git push -u origin <branch>`
+2. Create the PR (example):
+
+   ```bash
+   gh pr create --base main --head <branch> \
+     --title "feat(scope): short imperative summary" \
+     --body "$(cat <<'EOF'
+   ## Summary
+   One or two sentences on what changed and why.
+
+   ## Spec
+   docs/agentic-subsystem.md — <section heading> (and systems.md if relevant).
+
+   ## Verify
+   npm run check
+
+   Meta: AI-assisted (Cursor). Human reviewed.
+   EOF
+   )"
+   ```
+
+Use `--draft` for work-in-progress. If a PR for the branch already exists, use `gh pr edit <number> --title "…" --body "…"` instead of creating a duplicate. Requires a one-time `gh auth login` on the machine.
+
 ## Directing Cursor — task template
 
 Paste and fill:
