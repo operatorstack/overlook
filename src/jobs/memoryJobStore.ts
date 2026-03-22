@@ -31,6 +31,8 @@ export function patchGitScanJob(
       | "lastError"
       | "reviewUnits"
       | "reviewUnitScanTruncated"
+      | "findings"
+      | "analyzeSkipped"
     >
   >,
 ): GitScanJob | undefined {

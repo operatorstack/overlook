@@ -8,6 +8,7 @@ import type { GitScanJob } from "../jobs/types.js";
 export const gitRouter = Router();
 
 const REVIEW_UNITS_FULL_IN_RESPONSE = 25;
+const FINDINGS_FULL_IN_RESPONSE = 40;
 
 function gitJobJson(job: GitScanJob, options?: { listItem?: boolean }) {
   const row: Record<string, unknown> = {
@@ -38,6 +39,20 @@ function gitJobJson(job: GitScanJob, options?: { listItem?: boolean }) {
       } else {
         row.reviewUnits = job.reviewUnits.slice(0, REVIEW_UNITS_FULL_IN_RESPONSE);
         row.reviewUnitsTruncatedInResponse = true;
+      }
+    }
+  }
+  if (job.findings !== undefined) {
+    row.findingCount = job.findings.length;
+    if (job.analyzeSkipped === true) {
+      row.analyzeSkipped = true;
+    }
+    if (options?.listItem !== true) {
+      if (job.findings.length <= FINDINGS_FULL_IN_RESPONSE) {
+        row.findings = job.findings;
+      } else {
+        row.findings = job.findings.slice(0, FINDINGS_FULL_IN_RESPONSE);
+        row.findingsTruncatedInResponse = true;
       }
     }
   }

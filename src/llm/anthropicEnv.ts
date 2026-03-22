@@ -26,3 +26,11 @@ export function getAnthropicEnv(): AnthropicEnvSnapshot {
     configured: apiKey !== undefined,
   };
 }
+
+export function getAnthropicModel(): string {
+  const m = pick(process.env.ANTHROPIC_MODEL);
+  if (m !== undefined) {
+    return m;
+  }
+  return "claude-3-5-haiku-20241022";
+}

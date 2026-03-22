@@ -1,9 +1,25 @@
-export type JobStatus = "queued" | "ingesting" | "chunking" | "chunked" | "failed";
+export type JobStatus =
+  | "queued"
+  | "ingesting"
+  | "chunking"
+  | "chunked"
+  | "analyzing"
+  | "done"
+  | "failed";
 
 export type ReviewUnit = {
   path: string;
   language: string;
   content: string;
+};
+
+export type ScanFinding = {
+  findingId: string;
+  title: string;
+  angle: string;
+  evidencePath: string;
+  confidence: "low" | "medium" | "high";
+  detail: string;
 };
 
 export type GitScanJob = {
@@ -18,4 +34,6 @@ export type GitScanJob = {
   lastError?: string;
   reviewUnits?: ReviewUnit[];
   reviewUnitScanTruncated?: boolean;
+  findings?: ScanFinding[];
+  analyzeSkipped?: boolean;
 };
