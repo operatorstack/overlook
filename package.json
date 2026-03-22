@@ -1,0 +1,33 @@
+{
+  "name": "server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon -q",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "npx vitest run",
+    "test:watch": "npx vitest",
+    "check": "npm run build && npm run test",
+    "cli": "tsx src/cli.ts",
+    "ticket": "tsx src/cli.ts ticket"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.13.10",
+    "@types/supertest": "^6.0.2",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.8"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "watch": ["src", "public", ".env"],
+  "ext": "ts,json",
+  "ignore": ["src/**/*.test.ts", "node_modules"],
+  "exec": "tsx src/index.ts",
+  "delay": 300
+}

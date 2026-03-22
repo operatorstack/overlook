@@ -1,0 +1,53 @@
+import request from "supertest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { createApp } from "../app.js";
+import { clearGitScanJobsForTests } from "../jobs/memoryJobStore.js";
+
+describe("git routes", () => {
+  const app = createApp();
+
+  beforeEach(() => {
+    clearGitScanJobsForTests();
+  });
+
+  it("POST /v1/git/jobs creates job", async () => {
+    const res = await request(app)
+      .post("/v1/git/jobs")
+      .send({ gitUrl: "https://github.com/org/repo.git", ref: "main" })
+      .expect(201);
+    expect(res.body).toMatchObject({
+      status: "queued",
+      gitUrl: "https://github.com/org/repo.git",
+      ref: "main",
+    });
+    expect(typeof res.body.jobId).toBe("string");
+    expect(res.body.createdAt).toBeDefined();
+  });
+
+  it("GET /v1/git/jobs/:jobId returns job", async () => {
+    const created = await request(app)
+      .post("/v1/git/jobs")
+      .send({ gitUrl: "https://example.com/a.git" })
+      .expect(201);
+    const jobId = created.body.jobId as string;
+    const res = await request(app).get(`/v1/git/jobs/${jobId}`).expect(200);
+    expect(res.body.jobId).toBe(jobId);
+    expect(res.body.status).toBe("queued");
+  });
+
+  it("GET unknown job returns 404", async () => {
+    await request(app).get("/v1/git/jobs/00000000-0000-4000-8000-000000000000").expect(404);
+  });
+
+  it("POST rejects invalid body", async () => {
+    await request(app).post("/v1/git/jobs").send({}).expect(400);
+  });
+
+  it("GET /v1/git/jobs lists jobs", async () => {
+    await request(app).post("/v1/git/jobs").send({ gitUrl: "https://example.com/x.git" }).expect(201);
+    const res = await request(app).get("/v1/git/jobs").expect(200);
+    expect(res.body.count).toBe(1);
+    expect(res.body.jobs).toHaveLength(1);
+    expect(res.body.jobs[0].gitUrl).toBe("https://example.com/x.git");
+  });
+});
