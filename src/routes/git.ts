@@ -1,9 +1,32 @@
 import { randomUUID } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import { normalizeRef, validateGitRemoteUrl } from "../git/validateRemoteUrl.js";
+import { scheduleGitScanIngest } from "../jobs/gitIngestWorker.js";
 import { createGitScanJob, getJob, listGitScanJobs } from "../jobs/memoryJobStore.js";
+import type { GitScanJob } from "../jobs/types.js";
 
 export const gitRouter = Router();
+
+function gitJobJson(job: GitScanJob) {
+  const row: Record<string, unknown> = {
+    jobId: job.jobId,
+    status: job.status,
+    gitUrl: job.gitUrl,
+    ref: job.ref ?? null,
+    createdAt: job.createdAt,
+    agentNote: job.agentNote,
+  };
+  if (job.workspacePath !== undefined) {
+    row.workspacePath = job.workspacePath;
+  }
+  if (job.resolvedCommit !== undefined) {
+    row.resolvedCommit = job.resolvedCommit;
+  }
+  if (job.lastError !== undefined) {
+    row.lastError = job.lastError;
+  }
+  return row;
+}
 
 type CreateBody = {
   gitUrl?: unknown;
@@ -39,28 +62,15 @@ gitRouter.post("/git/jobs", (req: Request, res: Response) => {
     gitUrl: body.gitUrl.trim(),
     ref,
   });
-  res.status(201).json({
-    jobId: job.jobId,
-    status: job.status,
-    gitUrl: job.gitUrl,
-    ref: job.ref ?? null,
-    createdAt: job.createdAt,
-    agentNote: job.agentNote,
-  });
+  scheduleGitScanIngest(job.jobId);
+  res.status(201).json(gitJobJson(job));
 });
 
 gitRouter.get("/git/jobs", (_req: Request, res: Response) => {
   const jobs = listGitScanJobs();
   res.json({
     count: jobs.length,
-    jobs: jobs.map((j) => ({
-      jobId: j.jobId,
-      status: j.status,
-      gitUrl: j.gitUrl,
-      ref: j.ref ?? null,
-      createdAt: j.createdAt,
-      agentNote: j.agentNote,
-    })),
+    jobs: jobs.map((j) => gitJobJson(j)),
   });
 });
 
@@ -75,12 +85,5 @@ gitRouter.get("/git/jobs/:jobId", (req: Request, res: Response) => {
     res.status(404).json({ error: "job not found" });
     return;
   }
-  res.json({
-    jobId: job.jobId,
-    status: job.status,
-    gitUrl: job.gitUrl,
-    ref: job.ref ?? null,
-    createdAt: job.createdAt,
-    agentNote: job.agentNote,
-  });
+  res.json(gitJobJson(job));
 });

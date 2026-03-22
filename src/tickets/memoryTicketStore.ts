@@ -4,7 +4,7 @@ const tickets = new Map<string, ImplementationTicket>();
 
 const DEFAULT_AGENT_TITLE = "Implement agent pipeline (ingest → chunk → analyze → sink)";
 const DEFAULT_AGENT_BODY =
-  "No agent code in this repo yet. Wire host + agent package per server/docs/agentic-subsystem.md; git scan jobs stay queued until then.";
+  "Host runs git ingest asynchronously after enqueue (clone + ref checkout). Implement chunk → analyze → sink and the versioned agent package per server/docs/agentic-subsystem.md.";
 
 export function createImplementationTicket(input: {
   ticketId: string;

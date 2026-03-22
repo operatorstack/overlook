@@ -26,6 +26,10 @@ Do not put secrets or ad hoc global metric schema changes in the agent package; 
 - Use **existing** `src/` layout, naming, and patterns before adding parallel abstractions.
 - After substantive changes, run **`npm run check`** (build + tests).
 
+## Directing Cursor — git workflow
+
+When implementing a ticket or paste block from `npm run cli -- prompt`, **start on a new branch** (`git checkout -b …` from a clean main). **Do not push** to the remote unless the operator explicitly asks.
+
 ## Directing Cursor — task template
 
 Paste and fill:

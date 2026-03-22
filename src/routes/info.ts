@@ -65,7 +65,7 @@ export function createInfoRouter() {
         {
           name: "Agent pipeline",
           detail:
-            "Ingest, chunk, analyze, sink — jobs stay queued. Use dashboard **Build the agent — tickets** (or POST /v1/tickets) to track implementation work; that is not the agent code itself.",
+            "Ingest (clone) runs after job creation; chunk, analyze, and sink are not implemented yet. Use dashboard **Build the agent — tickets** (or POST /v1/tickets) to track remaining pipeline work.",
         },
         { name: "Evaluator / proposer cron", detail: "Slow loop not wired." },
         {
