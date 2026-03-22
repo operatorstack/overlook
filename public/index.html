@@ -463,9 +463,9 @@
       <h2 style="color: var(--warn)">Agent — start here</h2>
       <p class="empty" style="margin-top: 0; max-width: 44rem">
         Queue a <strong>git scan job</strong> from the browser (same as
-        <span class="mono">npm run cli -- scan …</span>). The server records the job; clone, chunk, and LLM
-        analysis are <strong>not</strong> running yet — status stays <span class="mono">queued</span> until
-        the pipeline exists.
+        <span class="mono">npm run cli -- scan …</span>). The server clones the repo in the background
+        (<span class="mono">ingesting</span> → <span class="mono">ingested</span> or <span class="mono">failed</span>).
+        Chunking, LLM analysis, and persistence of findings are <strong>not</strong> wired yet.
       </p>
       <button type="submit" form="agent-form" class="btn-start-huge" id="agent-start-top">
         <span class="play" aria-hidden="true">▶</span> Start scan

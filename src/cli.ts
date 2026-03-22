@@ -125,6 +125,8 @@ Scope (pick the best source of truth):
 1) If @docs/NEXT.md has a real Title line (not the placeholder), treat Title + Body as the ticket.
 2) Else, with the dev server running, call GET ${baseUrl}/v1/tickets and use the newest ticket's title and body (in-memory queue from npm run ticket / ticket:check).
 
+Workflow: create and switch to a **new git branch** before changing code; do **not** push or open a PR unless the operator asks.
+
 Constraints: no misleading success in production code; fakes only in tests. When done, run npm run check.
 
 --- end ---`);

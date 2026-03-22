@@ -13,10 +13,25 @@ export function createGitScanJob(input: {
     ref: input.ref,
     status: "queued",
     createdAt: new Date().toISOString(),
-    agentNote: "Agent pipeline not implemented; job registered only.",
+    agentNote: "Queued; ingest will run in the background.",
   };
   jobs.set(job.jobId, job);
   return job;
+}
+
+export function patchGitScanJob(
+  jobId: string,
+  patch: Partial<
+    Pick<GitScanJob, "status" | "agentNote" | "workspacePath" | "resolvedCommit" | "lastError">
+  >,
+): GitScanJob | undefined {
+  const existing = jobs.get(jobId);
+  if (existing === undefined) {
+    return undefined;
+  }
+  const next: GitScanJob = { ...existing, ...patch };
+  jobs.set(jobId, next);
+  return next;
 }
 
 export function getJob(jobId: string): GitScanJob | undefined {

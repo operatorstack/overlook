@@ -1,4 +1,4 @@
-export type JobStatus = "queued";
+export type JobStatus = "queued" | "ingesting" | "failed" | "ingested";
 
 export type GitScanJob = {
   jobId: string;
@@ -7,4 +7,7 @@ export type GitScanJob = {
   status: JobStatus;
   createdAt: string;
   agentNote: string;
+  workspacePath?: string;
+  resolvedCommit?: string;
+  lastError?: string;
 };
