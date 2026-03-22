@@ -1,3 +1,4 @@
+import { analyzeReviewUnits } from "./analyzeReviewUnits.js";
 import { chunkWorkspace, MAX_REVIEW_UNITS_PER_JOB } from "./chunkWorkspace.js";
 import { cloneGitWorkspace } from "./gitIngest.js";
 import { getJob, patchGitScanJob } from "./memoryJobStore.js";
@@ -43,15 +44,42 @@ async function runGitScanIngest(jobId: string): Promise<void> {
       });
       return;
     }
-    let note = "Chunk complete. Analyze and sink stages are not implemented yet.";
+    let chunkNote = "Chunk complete.";
     if (chunkResult.scanTruncated) {
-      note += ` Review unit list truncated at ${String(MAX_REVIEW_UNITS_PER_JOB)} files.`;
+      chunkNote += ` Review unit list truncated at ${String(MAX_REVIEW_UNITS_PER_JOB)} files.`;
     }
     patchGitScanJob(jobId, {
       status: "chunked",
       reviewUnits: chunkResult.units,
       reviewUnitScanTruncated: chunkResult.scanTruncated,
-      agentNote: note,
+      agentNote: chunkNote,
+    });
+    patchGitScanJob(jobId, {
+      status: "analyzing",
+      agentNote: "Analyze: running model or skipping when LLM is not configured.",
+    });
+    const analyzeResult = await analyzeReviewUnits({
+      reviewUnits: chunkResult.units,
+      reviewUnitScanTruncated: chunkResult.scanTruncated,
+    });
+    if (!analyzeResult.ok) {
+      patchGitScanJob(jobId, {
+        status: "failed",
+        lastError: analyzeResult.error,
+        agentNote: `Analyze failed: ${analyzeResult.error}`,
+      });
+      return;
+    }
+    let doneNote =
+      "Pipeline complete for this host slice: findings attached on the job (in-memory sink).";
+    if (analyzeResult.skipped) {
+      doneNote = `Analyze skipped (${analyzeResult.skipReason ?? "LLM not configured"}). Empty findings stored on the job.`;
+    }
+    patchGitScanJob(jobId, {
+      status: "done",
+      findings: analyzeResult.findings,
+      analyzeSkipped: analyzeResult.skipped,
+      agentNote: doneNote,
     });
   } else {
     patchGitScanJob(jobId, {

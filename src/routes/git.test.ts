@@ -59,7 +59,7 @@ describe("git routes", () => {
     if (typeof jobId !== "string") {
       throw new Error("expected jobId string");
     }
-    const body = await pollJobBody(app, jobId, (s) => s === "failed" || s === "chunked");
+    const body = await pollJobBody(app, jobId, (s) => s === "failed" || s === "done");
     expect(body.jobId).toBe(jobId);
     expect(body.status).toBe("failed");
     const err = body.lastError;
@@ -83,7 +83,7 @@ describe("git routes", () => {
     if (typeof jobId !== "string") {
       throw new Error("expected jobId string");
     }
-    await pollJobBody(app, jobId, (s) => s === "failed" || s === "chunked");
+    await pollJobBody(app, jobId, (s) => s === "failed" || s === "done");
     const res = await request(app).get("/v1/git/jobs").expect(200);
     expect(res.body.count).toBe(1);
     expect(res.body.jobs).toHaveLength(1);

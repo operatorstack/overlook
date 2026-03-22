@@ -65,7 +65,7 @@ export function createInfoRouter() {
         {
           name: "Agent pipeline",
           detail:
-            "Ingest and chunk run after job creation (review units in memory). Analyze and sink are not implemented yet. Use dashboard **Build the agent — tickets** (or POST /v1/tickets) to track remaining pipeline work.",
+            "Ingest, chunk, and optional Anthropic analyze run after job creation; findings are stored on the job in memory. Durable sink, evaluator/proposer, and deployable agent package are still open. Track work via **Build the agent — tickets** (or POST /v1/tickets).",
         },
         { name: "Evaluator / proposer cron", detail: "Slow loop not wired." },
         {

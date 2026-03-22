@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getAnthropicEnv } from "./anthropicEnv.js";
+import { getAnthropicEnv, getAnthropicModel } from "./anthropicEnv.js";
 
 describe("getAnthropicEnv", () => {
   afterEach(() => {
@@ -29,5 +29,21 @@ describe("getAnthropicEnv", () => {
     vi.stubEnv("ANTHROPIC_BASE_URL", "https://api.anthropic.com");
     const c = getAnthropicEnv();
     expect(c.baseUrl).toBe("https://api.anthropic.com");
+  });
+});
+
+describe("getAnthropicModel", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("defaults when ANTHROPIC_MODEL unset", () => {
+    vi.stubEnv("ANTHROPIC_MODEL", "");
+    expect(getAnthropicModel()).toBe("claude-3-5-haiku-20241022");
+  });
+
+  it("uses trimmed ANTHROPIC_MODEL when set", () => {
+    vi.stubEnv("ANTHROPIC_MODEL", "  claude-test  ");
+    expect(getAnthropicModel()).toBe("claude-test");
   });
 });
