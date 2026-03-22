@@ -7,7 +7,9 @@ import type { GitScanJob } from "../jobs/types.js";
 
 export const gitRouter = Router();
 
-function gitJobJson(job: GitScanJob) {
+const REVIEW_UNITS_FULL_IN_RESPONSE = 25;
+
+function gitJobJson(job: GitScanJob, options?: { listItem?: boolean }) {
   const row: Record<string, unknown> = {
     jobId: job.jobId,
     status: job.status,
@@ -24,6 +26,20 @@ function gitJobJson(job: GitScanJob) {
   }
   if (job.lastError !== undefined) {
     row.lastError = job.lastError;
+  }
+  if (job.reviewUnits !== undefined) {
+    row.reviewUnitCount = job.reviewUnits.length;
+    if (job.reviewUnitScanTruncated === true) {
+      row.reviewUnitScanTruncated = true;
+    }
+    if (options?.listItem !== true) {
+      if (job.reviewUnits.length <= REVIEW_UNITS_FULL_IN_RESPONSE) {
+        row.reviewUnits = job.reviewUnits;
+      } else {
+        row.reviewUnits = job.reviewUnits.slice(0, REVIEW_UNITS_FULL_IN_RESPONSE);
+        row.reviewUnitsTruncatedInResponse = true;
+      }
+    }
   }
   return row;
 }
@@ -70,7 +86,7 @@ gitRouter.get("/git/jobs", (_req: Request, res: Response) => {
   const jobs = listGitScanJobs();
   res.json({
     count: jobs.length,
-    jobs: jobs.map((j) => gitJobJson(j)),
+    jobs: jobs.map((j) => gitJobJson(j, { listItem: true })),
   });
 });
 
