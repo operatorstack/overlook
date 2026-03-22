@@ -1,7 +1,7 @@
 # Systems: self-improving code scanner (working name: Overlook)
 
 **Path (for citations):** `server/docs/systems.md` — improvement tickets, commits, and agent outputs should cite **this file and the section heading** they rely on.  
-**Companion:** agent behavior and fast-loop detail → [`agentic-subsystem.md`](./agentic-subsystem.md). **Figures:** [`diagrams.md`](./diagrams.md).  
+**Companion:** agent behavior and fast-loop detail → [`agentic-subsystem.md`](./agentic-subsystem.md). **Figures:** [`diagrams.md`](./diagrams.md) (full loop, signals, inner loop, modes, **build path**).  
 **Level:** systems architecture only — not APIs, storage, or UI.  
 **Owner / last reviewed:** _TBD_
 
@@ -13,7 +13,7 @@ Run a **negative-feedback-style loop** around an agent that **scans AI-generated
 
 Qualitative: **useful, novel, actionable findings** under **cost and latency** operators accept, with **evidence** tied to scanned code. **Human approval** is the main gate for changing behavior, so the reference may stay informal early on.
 
-When objectives conflict, **goal priority** (below) decides what wins. The evaluator and proposer must **respect that ordering** in how they frame deficits and tickets.
+When objectives conflict, **goal priority** (below) decides what wins. The evaluator, proposer, and any **build actuator** must **respect that ordering** in how they frame deficits, tickets, and workspace changes.
 
 ## Goal priority (ordered — higher first)
 
@@ -33,6 +33,7 @@ Lower-priority goals must **not** be improved by violating higher-priority ones.
 | **Sensor bus** | **Append-only events** and **rolled-up metrics** from the pipeline (health, cost, outcomes, agent version, model behavior). |
 | **Evaluator (slow loop)** | On a **schedule**, reads aggregates (and optional **golden replays**), outputs one **error package**: **deficits** + **evidence**, vs reference. |
 | **Proposer (controller)** | Reads **error package** + **agent artifacts** (prompts, logic, config). Outputs **one human-reviewable improvement ticket** (prefer **minimal, self-contained** changes as the system matures). |
+| **Build actuator (workspace)** | Turns **implementation intent** (ticket text, optional draft slice in [`NEXT.md`](./NEXT.md), and accepted history in **`BUILD_LOG.md`**) into **reviewable** workspace output (plan, branch, diff, local verification). Uses **operator tooling** (e.g. an IDE with full-repo index) for grounding; does **not** move authoritative behavior to live. |
 | **Human gate** | Accept → publish new agent package / prompts / instrumentation; reject or defer → plant unchanged. Each accept **appends** [`BUILD_LOG.md`](./build-log.md) per policy. |
 
 ## Update authority (what each subsystem may change)
@@ -43,9 +44,16 @@ Lower-priority goals must **not** be improved by violating higher-priority ones.
 | **Sensor bus** | **Event instances** (writes) from instrumented code paths in releases humans approved. **Schema or new event types** ship only as part of an **accepted ticket** (same as code). | Silently redefine meaning of existing metrics or drop required fields without a versioned change and review. |
 | **Evaluator** | **Error package** documents and **internal eval config** (e.g. thresholds, window length) if that config is **versioned and reviewed** like code—or keep eval logic in-repo and change only via tickets. | Apply agent or prompt changes directly; mutate production data beyond read aggregates. |
 | **Proposer** | **Text of the pending ticket** (proposal narrative, suggested diffs as content). | Apply any change to runtime, secrets, or live config; open a **second** concurrent pending ticket (see anti-thrash). |
+| **Build actuator** | **Workspace-only** artifacts: working tree edits, branches, local test runs, and **draft** planning docs (e.g. updates to [`NEXT.md`](./NEXT.md)) when policy allows. | **Deploy** or **append `BUILD_LOG.md`**; mutate production runtime, secrets, or live config; bypass **verification before accept** where policy requires checks before merge. |
 | **Human gate** | **Deploy** approved agent bundles, prompt updates, and instrumentation changes; **reject** or **defer** proposals; **append** an entry to **`BUILD_LOG.md`** in the deployable tree. | Bypass recorded tests or rollback expectations defined in policy when those are required for accept. |
 
 **Rule:** only the **human gate** moves **authoritative** behavior from “proposal” to “live.” Everything else produces **data or documents**.
+
+## Build actuator — model
+
+The **build actuator** is defined **by this system model**, not as a parallel process. It sits **after** a **pending implementation ticket** (or equivalent operator intent) and **before** accept: it narrows **what to change** using the same **goal priority** and **control guardrails** as the slow loop, and produces **reviewable** repo state. **Grounding** (mapping ticket language to real files and APIs) is expected in **operator-controlled tooling**—for example an indexed workspace in Cursor—so the host service need not duplicate full-repo awareness for that step.
+
+**Flow:** ticket (+ optional [`NEXT.md`](./NEXT.md) + **`BUILD_LOG.md`** for context) → **build actuator** (workspace) → human review → **human gate** (merge/deploy + **append `BUILD_LOG.md`**).
 
 ## Build log (accepted suggestions)
 
@@ -53,7 +61,7 @@ Every **accepted** improvement must leave an **append-only** record in **`BUILD_
 
 ## Control guardrails
 
-- **No auto-apply** — the proposer and evaluator never promote changes to production; humans do.  
+- **No auto-apply** — the proposer, evaluator, and build actuator never promote changes to production or **append `BUILD_LOG.md`**; humans do.  
 - **Anti-thrash** — single pending ticket, merge updates, and cooldowns as in **Error and anti-thrash policy** below.  
 - **Cooldown** — after reject or N failed validation attempts, pause scheduled proposer runs until cooldown elapses.  
 - **Allowlisted actuator types** — tickets classify proposals (e.g. prompt-only, agent code, observability-only). **Out-of-band** changes (credentials, billing, infra) are **out of scope** for the proposer; reject at review if they appear.  
@@ -66,7 +74,7 @@ Every **accepted** improvement must leave an **append-only** record in **`BUILD_
 ## Control loops
 
 - **Fast loop (online):** each scan job drives the runtime and **writes sensors** only. Spec: [`agentic-subsystem.md`](./agentic-subsystem.md).  
-- **Slow loop (scheduled):** evaluator → error package → proposer → **pending ticket**.
+- **Slow loop (scheduled):** evaluator → error package → proposer → **pending ticket** → (optional) **build actuator** in workspace → human review → **human gate**.
 
 ## Autopilot analogy (software flight control)
 
@@ -79,6 +87,7 @@ Aerospace **autopilot** is the organizing metaphor: **layered control**, **hard 
 | **Inner loop** | **Fast loop** — ingest → chunk → analyze → sink per job; tight regulation of that pipeline. |
 | **Outer loop / flight director** | **Evaluator** — compares measured behavior to the **reference** and **goal priority**; produces the **error package**. |
 | **Autopilot command path** | **Proposer** — turns error + context into **stick inputs** as text: a single **improvement ticket**, not live mutation. |
+| **Preflight / implementation tooling** | **Build actuator** — uses operator workspace and repo index to turn ticket + **NEXT** + **build log** context into **reviewable** changes; still **no** deploy until **human gate**. |
 | **Envelope protection** | **Control guardrails** and **goal priority** — safety, integrity, and correctness bound what may be suggested or accepted. |
 | **Actuator limits / rate limits** | Token caps, job rate, **single pending ticket**, **cooldowns** — anti-windup / anti-pilot-induced oscillation. |
 | **Gain scheduling** | **Policy as a function of state** (e.g. cost high → smaller chunks or cheaper path) — implemented as **versioned config** in host and/or package, not ad hoc in one prompt. |
@@ -108,7 +117,7 @@ Optional later: **sensor policy** (what to sample or log more heavily).
 
 ## Actuators
 
-Tickets may propose changes to **prompts**, **agent logic**, **chunking heuristics**, **observability** (new events/metrics), or **documentation** — always as **reviewable packages**. The actuator in the loop is **proposal**, not silent mutation.
+Tickets may propose changes to **prompts**, **agent logic**, **chunking heuristics**, **observability** (new events/metrics), or **documentation** — always as **reviewable packages**. The primary actuator in the slow loop is **proposal** (text), not silent mutation. The **build actuator** is a **secondary, workspace-only** actuator: it materializes **implementation** work as diffs and local verification until the **human gate** accepts.
 
 ## Transfer functions / Laplace note
 

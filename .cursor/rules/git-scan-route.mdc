@@ -1,0 +1,11 @@
+---
+description: Git scan HTTP route — enqueue and validation
+globs: src/routes/git.ts
+alwaysApply: false
+---
+
+# `src/routes/git.ts`
+
+- Validate input with existing helpers (e.g. `src/git/validateRemoteUrl.ts`); do not bypass validation for convenience.
+- Creating a job must go through `src/jobs/` APIs so all enqueue paths share one model.
+- For pipeline semantics and stage names, follow `docs/agentic-subsystem.md` and keep `scanner-jobs-and-git-api` in mind when editing job-related types.

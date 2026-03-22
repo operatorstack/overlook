@@ -50,6 +50,7 @@ npm run cli -- check
 | `npm run dev` | Run server with **nodemon** (restarts on `src/**`, `public/**`, and `.env` changes) |
 | `npm start` | Run compiled server (`node dist/index.js`) |
 | `npm run cli -- scan <gitUrl> [ref]` | Hit running API (needs server) |
+| `npm run cli -- doctor` (or `next`) | Node / `.env` / server probe + next-step hints |
 
 **Dashboard:** with the server running, open [http://127.0.0.1:3000/](http://127.0.0.1:3000/) — **Agent — start here** (form to queue a git job), health, job list, build history, and docs.
 
@@ -64,6 +65,10 @@ Deep links: [implementation tickets](http://127.0.0.1:3000/#implementation-ticke
 | `npm run ticket` | Default pipeline ticket (same as dashboard). |
 | `npm run ticket -- draft` | Custom ticket from [`docs/NEXT.md`](NEXT.md) (`Title:` + optional `Body:`). |
 | `npm run cli -- ticket My title here` | Custom title (rest of line = title). |
+| `npm run ticket:check` | Default ticket **then** `npm run check` (server must be up for the ticket step). |
+| `npm run cursor:prompt` | Prints text to **paste into Cursor Agent** after `ticket:check` (same as `npm run cli -- prompt`). |
+
+Tickets only **record intent** in memory; they do **not** compile code or open CI. **Cursor** does not auto-run after npm scripts — run `npm run cursor:prompt`, copy the output, open **Cursor Agent**, paste, and attach `@` files as prompted. See root `AGENTS.md`.
 
 **Build history API:** `GET /api/build-history` (JSON), `GET /BUILD_LOG.md` (raw markdown).
 

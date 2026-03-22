@@ -1,0 +1,13 @@
+---
+description: Git scan jobs and enqueue API — pipeline boundaries
+globs: src/jobs/**/*.ts
+alwaysApply: false
+---
+
+# Scanner jobs (`src/jobs/`)
+
+- Jobs are the **plant** state for git scan work. Status transitions and notes must remain **auditable** and honest (see `docs/systems.md` integrity goals).
+- The pipeline stages are normatively **ingest → chunk → analyze → sink** (`docs/agentic-subsystem.md`). When adding code, keep stage boundaries clear so prompts and chunk policy can move toward an **agent package** without rewriting the host.
+- Persisted fields on job types should support **operator visibility** (what ran, what failed, version identity when introduced).
+
+Enqueue HTTP handlers live in `src/routes/git.ts`; keep request validation and job creation consistent with `src/jobs/types.ts` and the job store.

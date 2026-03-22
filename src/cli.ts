@@ -3,6 +3,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runDoctor } from "./cli/doctor.js";
 import { parseNextTicketDraft } from "./tickets/parseNextDraft.js";
 
 const baseUrl = (process.env.BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
@@ -31,6 +32,8 @@ Commands:
   build     Run TypeScript compile (same as npm run build)
   test      Run unit tests (same as npm run test)
   check     build + test (use before accepting changes)
+  doctor    Environment + server probe + next-step hints (alias: next)
+  prompt    Print text to paste into Cursor Agent after ticket:check
   scan      Call API: scan <gitUrl> [ref]
   ticket    Create implementation ticket (needs server running)
   help      Show this message
@@ -45,6 +48,8 @@ Ticket (implementation queue):
 
 Examples:
   npm run cli -- check
+  npm run cli -- doctor
+  npm run cli -- prompt
   npm run cli -- scan https://github.com/org/repo.git main
   npm run ticket
   npm start
@@ -103,6 +108,26 @@ async function commandTicket(argv: string[]): Promise<void> {
     process.exit(1);
   }
   await postTicketJson({ kind: "custom", title, body: "" });
+}
+
+function commandPrompt(): void {
+  console.log(`--- Copy into Cursor Agent (Cmd+I / Composer) ---
+
+Implement the next concrete slice in this repo.
+
+@AGENTS.md — use the task template at the bottom; fill Goal / Spec / scope / Verify.
+
+Read as needed:
+@docs/agentic-subsystem.md
+@docs/systems.md
+
+Scope (pick the best source of truth):
+1) If @docs/NEXT.md has a real Title line (not the placeholder), treat Title + Body as the ticket.
+2) Else, with the dev server running, call GET ${baseUrl}/v1/tickets and use the newest ticket's title and body (in-memory queue from npm run ticket / ticket:check).
+
+Constraints: no misleading success in production code; fakes only in tests. When done, run npm run check.
+
+--- end ---`);
 }
 
 async function commandScan(gitUrl: string, ref: string | undefined): Promise<void> {
@@ -169,6 +194,11 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "doctor" || command === "next") {
+    const code = await runDoctor(packageRoot, baseUrl);
+    process.exit(code);
+  }
+
   if (command === "check") {
     const npm = process.platform === "win32" ? "npm.cmd" : "npm";
     const build = spawnSync(npm, ["run", "build"], {
@@ -185,6 +215,11 @@ async function main(): Promise<void> {
       env: process.env,
     });
     process.exit(test.status === null ? 1 : test.status);
+  }
+
+  if (command === "prompt") {
+    commandPrompt();
+    return;
   }
 
   if (command === "scan") {

@@ -1,0 +1,16 @@
+---
+description: Overlook process — specs, honesty, PR slices, verification
+alwaysApply: true
+---
+
+# Overlook (server) — process
+
+Before changing runtime, jobs, tickets, or LLM wiring:
+
+1. Read the relevant sections of `docs/systems.md` (goal priority, update authority) and `docs/agentic-subsystem.md` (contracts, host vs agent package).
+2. State which **contract** you are implementing or extending (job context, review unit shape, finding shape, failure behavior).
+3. **No misleading success paths** in production code: do not mark work complete or emit bogus findings to satisfy a form. Prefer explicit errors or a clearly named internal stage. Use fakes/mocks **only in tests**.
+4. Keep PRs **small and vertical** when possible: one coherent slice with tests and `npm run check` clean.
+5. If the change is an accepted deployable improvement, follow `docs/build-log.md` for `BUILD_LOG.md` (human step — do not fake log entries as “done” without policy alignment).
+
+When the user gives a task, prefer their filled **AGENTS.md** template (goal, spec section, scope, verify).

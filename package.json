@@ -11,7 +11,9 @@
     "test:watch": "npx vitest",
     "check": "npm run build && npm run test",
     "cli": "tsx src/cli.ts",
-    "ticket": "tsx src/cli.ts ticket"
+    "ticket": "tsx src/cli.ts ticket",
+    "ticket:check": "npm run ticket && npm run check",
+    "cursor:prompt": "tsx src/cli.ts prompt"
   },
   "engines": {
     "node": ">=20"
