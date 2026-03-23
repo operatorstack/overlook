@@ -52,8 +52,17 @@ export function createInfoRouter() {
         { name: "API: implementation tickets (track building the agent)", method: "POST", path: "/v1/tickets" },
         { name: "API: list implementation tickets", method: "GET", path: "/v1/tickets" },
         { name: "API: get ticket", method: "GET", path: "/v1/tickets/:ticketId" },
-        { name: "API: create git job", method: "POST", path: "/v1/git/jobs" },
+        {
+          name: "API: create git job (optional deferStart: true to queue without auto-run)",
+          method: "POST",
+          path: "/v1/git/jobs",
+        },
         { name: "API: list git jobs", method: "GET", path: "/v1/git/jobs" },
+        { name: "API: start a queued git job", method: "POST", path: "/v1/git/jobs/:jobId/run" },
+        {
+          name: "Terminal git jobs: JSON snapshots in data/job-sink (hydrated on server start)",
+          hint: "OVERLOOK_JOB_SINK_DIR",
+        },
         { name: "API: get git job", method: "GET", path: "/v1/git/jobs/:jobId" },
         { name: "API: system snapshot + build + LLM env (Anthropic)", method: "GET", path: "/api/info" },
         { name: "API: build history", method: "GET", path: "/api/build-history" },
@@ -65,12 +74,13 @@ export function createInfoRouter() {
         {
           name: "Agent pipeline",
           detail:
-            "Ingest, chunk, and optional Anthropic analyze run after job creation; findings are stored on the job in memory. Durable sink, evaluator/proposer, and deployable agent package are still open. Track work via **Build the agent — tickets** (or POST /v1/tickets).",
+            "Ingest, chunk, and optional Anthropic analyze; terminal job snapshots on disk and in-memory. Evaluator/proposer and versioned agent package are still open. Track work via **Build the agent — tickets** (or POST /v1/tickets).",
         },
         { name: "Evaluator / proposer cron", detail: "Slow loop not wired." },
         {
           name: "Persistent stores",
-          detail: "Git jobs and implementation tickets are in-memory; restart clears them until you add a database.",
+          detail:
+            "Implementation tickets and in-flight git jobs are in-memory only. Terminal (done/failed) jobs are rehydrated from the job sink directory on startup; use a database when you need full history or multi-instance consistency.",
         },
       ],
       repositoryDocs: [

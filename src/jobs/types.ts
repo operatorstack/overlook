@@ -33,6 +33,8 @@ export type GitScanJob = {
   resolvedCommit?: string;
   lastError?: string;
   reviewUnits?: ReviewUnit[];
+  /** Set when review unit bodies are omitted (e.g. disk snapshot) but count is known. */
+  reviewUnitCount?: number;
   reviewUnitScanTruncated?: boolean;
   findings?: ScanFinding[];
   analyzeSkipped?: boolean;
