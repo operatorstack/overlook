@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import { normalizeRef, validateGitRemoteUrl } from "../git/validateRemoteUrl.js";
 import { scheduleGitScanIngest } from "../jobs/gitIngestWorker.js";
-import { createGitScanJob, getJob, listGitScanJobs } from "../jobs/memoryJobStore.js";
+import { createGitScanJob, getJob, listGitScanJobs, patchGitScanJob } from "../jobs/memoryJobStore.js";
 import type { GitScanJob } from "../jobs/types.js";
 
 export const gitRouter = Router();
@@ -41,6 +41,11 @@ function gitJobJson(job: GitScanJob, options?: { listItem?: boolean }) {
         row.reviewUnitsTruncatedInResponse = true;
       }
     }
+  } else if (job.reviewUnitCount !== undefined) {
+    row.reviewUnitCount = job.reviewUnitCount;
+    if (job.reviewUnitScanTruncated === true) {
+      row.reviewUnitScanTruncated = true;
+    }
   }
   if (job.findings !== undefined) {
     row.findingCount = job.findings.length;
@@ -62,6 +67,7 @@ function gitJobJson(job: GitScanJob, options?: { listItem?: boolean }) {
 type CreateBody = {
   gitUrl?: unknown;
   ref?: unknown;
+  deferStart?: unknown;
 };
 
 gitRouter.post("/git/jobs", (req: Request, res: Response) => {
@@ -88,12 +94,22 @@ gitRouter.post("/git/jobs", (req: Request, res: Response) => {
     }
     ref = normalized;
   }
-  const job = createGitScanJob({
+  let job = createGitScanJob({
     jobId: randomUUID(),
     gitUrl: body.gitUrl.trim(),
     ref,
   });
-  scheduleGitScanIngest(job.jobId);
+  const deferStart = body.deferStart === true;
+  if (deferStart) {
+    const updated = patchGitScanJob(job.jobId, {
+      agentNote: "Queued; pipeline not started. Use Run in the dashboard or POST /v1/git/jobs/:jobId/run.",
+    });
+    if (updated !== undefined) {
+      job = updated;
+    }
+  } else {
+    scheduleGitScanIngest(job.jobId);
+  }
   res.status(201).json(gitJobJson(job));
 });
 
@@ -102,6 +118,31 @@ gitRouter.get("/git/jobs", (_req: Request, res: Response) => {
   res.json({
     count: jobs.length,
     jobs: jobs.map((j) => gitJobJson(j, { listItem: true })),
+  });
+});
+
+gitRouter.post("/git/jobs/:jobId/run", (req: Request, res: Response) => {
+  const jobId = req.params.jobId;
+  if (typeof jobId !== "string" || jobId.length === 0) {
+    res.status(400).json({ error: "jobId is required" });
+    return;
+  }
+  const job = getJob(jobId);
+  if (job === undefined) {
+    res.status(404).json({ error: "job not found" });
+    return;
+  }
+  if (job.status !== "queued") {
+    res.status(409).json({
+      error: `job is not queued (current status: ${job.status})`,
+    });
+    return;
+  }
+  scheduleGitScanIngest(job.jobId);
+  res.status(202).json({
+    jobId: job.jobId,
+    status: job.status,
+    message: "Pipeline scheduled",
   });
 });
 

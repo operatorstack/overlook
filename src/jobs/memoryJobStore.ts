@@ -64,3 +64,9 @@ export function listGitScanJobs(): GitScanJob[] {
 export function clearGitScanJobsForTests(): void {
   jobs.clear();
 }
+
+export function importJobIfAbsent(job: GitScanJob): void {
+  if (!jobs.has(job.jobId)) {
+    jobs.set(job.jobId, job);
+  }
+}

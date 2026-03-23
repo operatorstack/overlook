@@ -1,6 +1,7 @@
 import { analyzeReviewUnits } from "./analyzeReviewUnits.js";
 import { chunkWorkspace, MAX_REVIEW_UNITS_PER_JOB } from "./chunkWorkspace.js";
 import { cloneGitWorkspace } from "./gitIngest.js";
+import { persistTerminalJobById } from "./jobSink.js";
 import { getJob, patchGitScanJob } from "./memoryJobStore.js";
 
 export function scheduleGitScanIngest(jobId: string): void {
@@ -42,6 +43,7 @@ async function runGitScanIngest(jobId: string): Promise<void> {
         lastError: chunkResult.error,
         agentNote: `Chunk failed: ${chunkResult.error}`,
       });
+      await persistTerminalJobById(jobId);
       return;
     }
     let chunkNote = "Chunk complete.";
@@ -68,12 +70,13 @@ async function runGitScanIngest(jobId: string): Promise<void> {
         lastError: analyzeResult.error,
         agentNote: `Analyze failed: ${analyzeResult.error}`,
       });
+      await persistTerminalJobById(jobId);
       return;
     }
     let doneNote =
-      "Pipeline complete for this host slice: findings attached on the job (in-memory sink).";
+      "Pipeline complete. Findings on the job; a terminal JSON snapshot is written to the job sink directory (default data/job-sink, or OVERLOOK_JOB_SINK_DIR).";
     if (analyzeResult.skipped) {
-      doneNote = `Analyze skipped (${analyzeResult.skipReason ?? "LLM not configured"}). Empty findings stored on the job.`;
+      doneNote = `Analyze skipped (${analyzeResult.skipReason ?? "LLM not configured"}). Empty findings on the job; terminal snapshot still written to the job sink directory.`;
     }
     patchGitScanJob(jobId, {
       status: "done",
@@ -81,11 +84,13 @@ async function runGitScanIngest(jobId: string): Promise<void> {
       analyzeSkipped: analyzeResult.skipped,
       agentNote: doneNote,
     });
+    await persistTerminalJobById(jobId);
   } else {
     patchGitScanJob(jobId, {
       status: "failed",
       lastError: result.error,
       agentNote: `Ingest failed: ${result.error}`,
     });
+    await persistTerminalJobById(jobId);
   }
 }

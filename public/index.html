@@ -133,6 +133,55 @@
       button:hover {
         filter: brightness(1.08);
       }
+      button.btn-sm {
+        padding: 0.2rem 0.45rem;
+        font-size: 0.72rem;
+        margin-right: 0.35rem;
+        margin-bottom: 0.25rem;
+      }
+      .job-actions {
+        white-space: normal;
+        max-width: 10rem;
+      }
+      .defer-start-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-top: 0.65rem;
+        max-width: 36rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      .defer-start-row input {
+        margin-top: 0.2rem;
+        width: auto;
+      }
+      .finding-card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.65rem 0.75rem;
+        margin: 0.5rem 0;
+        font-size: 0.85rem;
+      }
+      .finding-card h4 {
+        margin: 0 0 0.35rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+      .job-results-meta {
+        font-size: 0.85rem;
+        margin-bottom: 0.75rem;
+      }
+      .job-results-meta dt {
+        color: var(--muted);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-top: 0.5rem;
+      }
+      .job-results-meta dd {
+        margin: 0.15rem 0 0;
+      }
       .row {
         display: flex;
         align-items: center;
@@ -489,6 +538,13 @@
         />
         <label for="agent-ref">Ref (optional)</label>
         <input id="agent-ref" name="ref" type="text" placeholder="main" />
+        <div class="defer-start-row">
+          <input type="checkbox" id="agent-defer-start" name="deferStart" />
+          <label for="agent-defer-start" style="margin: 0; font-weight: 400; text-transform: none; letter-spacing: normal">
+            Queue only — start the pipeline with <strong>Run</strong> in the job table below (otherwise it starts
+            immediately).
+          </label>
+        </div>
         <div class="form-actions">
           <button type="submit" class="btn-start-huge" id="agent-start">
             <span class="play" aria-hidden="true">▶</span> Start scan
@@ -516,6 +572,15 @@
     <div class="card" style="margin-top: 1rem">
       <h2>Registered git jobs</h2>
       <div id="jobs-table"></div>
+    </div>
+
+    <div class="card" style="margin-top: 1rem" id="job-results-panel">
+      <h2>Job results</h2>
+      <p class="empty" id="job-results-placeholder">
+        Choose <strong>View</strong> on a row to load results here. For manual start, enable <strong>Queue only</strong>
+        above, submit, then press <strong>Run</strong>.
+      </p>
+      <div id="job-results-body" style="display: none"></div>
     </div>
 
     <div class="card" style="margin-top: 1rem">
@@ -561,6 +626,178 @@
           throw new Error(msg);
         }
         return data;
+      }
+
+      let jobPollTimer = null;
+
+      function stopJobPoll() {
+        if (jobPollTimer !== null) {
+          clearInterval(jobPollTimer);
+          jobPollTimer = null;
+        }
+      }
+
+      function isTerminalStatus(s) {
+        return s === "done" || s === "failed";
+      }
+
+      async function postRunJob(jobId) {
+        const res = await fetch("/v1/git/jobs/" + encodeURIComponent(jobId) + "/run", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        });
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error(text.slice(0, 200));
+        }
+        if (res.status === 202) {
+          return data;
+        }
+        const msg = typeof data.error === "string" ? data.error : res.statusText;
+        throw new Error(msg);
+      }
+
+      function renderJobResults(container, job) {
+        container.textContent = "";
+        const wrap = document.createElement("div");
+        const idLine = document.createElement("p");
+        idLine.className = "mono";
+        idLine.style.fontSize = "0.8rem";
+        idLine.style.color = "var(--muted)";
+        idLine.textContent = "jobId: " + job.jobId;
+        wrap.appendChild(idLine);
+        const dl = document.createElement("dl");
+        dl.className = "job-results-meta";
+        function addRow(label, value) {
+          if (value === undefined || value === null || value === "") {
+            return;
+          }
+          const dt = document.createElement("dt");
+          dt.textContent = label;
+          const dd = document.createElement("dd");
+          if (label === "Status") {
+            const strong = document.createElement("strong");
+            strong.textContent = String(value);
+            dd.appendChild(strong);
+          } else {
+            dd.textContent = String(value);
+          }
+          dl.appendChild(dt);
+          dl.appendChild(dd);
+        }
+        addRow("Status", job.status);
+        addRow("Note", job.agentNote);
+        if (job.lastError) {
+          addRow("Error", job.lastError);
+        }
+        addRow("Commit", job.resolvedCommit);
+        if (job.reviewUnitCount !== undefined) {
+          addRow("Review units", String(job.reviewUnitCount));
+        }
+        if (job.reviewUnitScanTruncated) {
+          addRow("Scan", "Unit list truncated at cap");
+        }
+        if (job.reviewUnitsTruncatedInResponse) {
+          addRow("API", "Review units truncated in this response");
+        }
+        if (job.findingCount !== undefined) {
+          addRow("Findings", String(job.findingCount));
+        }
+        if (job.analyzeSkipped) {
+          addRow("Analyze", "Skipped (LLM not configured or not invoked)");
+        }
+        if (job.findingsTruncatedInResponse) {
+          addRow("API", "Findings truncated in this response");
+        }
+        wrap.appendChild(dl);
+        if (Array.isArray(job.findings) && job.findings.length > 0) {
+          const fh = document.createElement("h3");
+          fh.style.fontSize = "0.75rem";
+          fh.style.textTransform = "uppercase";
+          fh.style.color = "var(--muted)";
+          fh.style.marginTop = "0.75rem";
+          fh.textContent = "Findings";
+          wrap.appendChild(fh);
+          for (const f of job.findings) {
+            const card = document.createElement("div");
+            card.className = "finding-card";
+            const h = document.createElement("h4");
+            h.textContent = f.title || "(no title)";
+            card.appendChild(h);
+            const meta = document.createElement("div");
+            meta.style.fontSize = "0.75rem";
+            meta.style.color = "var(--muted)";
+            meta.textContent = (f.confidence || "") + " · " + (f.evidencePath || "");
+            card.appendChild(meta);
+            const ang = document.createElement("p");
+            ang.style.margin = "0.35rem 0 0";
+            ang.textContent = f.angle || "";
+            card.appendChild(ang);
+            const det = document.createElement("p");
+            det.style.margin = "0.35rem 0 0";
+            det.textContent = f.detail || "";
+            card.appendChild(det);
+            wrap.appendChild(card);
+          }
+        }
+        container.appendChild(wrap);
+      }
+
+      async function showJobResults(jobId) {
+        stopJobPoll();
+        const placeholder = document.getElementById("job-results-placeholder");
+        const bodyEl = document.getElementById("job-results-body");
+        placeholder.style.display = "none";
+        bodyEl.style.display = "block";
+        bodyEl.textContent = "Loading…";
+        try {
+          const job = await fetchJson("/v1/git/jobs/" + encodeURIComponent(jobId));
+          renderJobResults(bodyEl, job);
+          if (!isTerminalStatus(job.status)) {
+            jobPollTimer = setInterval(async () => {
+              try {
+                const j2 = await fetchJson("/v1/git/jobs/" + encodeURIComponent(jobId));
+                renderJobResults(bodyEl, j2);
+                if (isTerminalStatus(j2.status)) {
+                  stopJobPoll();
+                  await load();
+                }
+              } catch {
+                stopJobPoll();
+              }
+            }, 900);
+          }
+        } catch (e) {
+          bodyEl.textContent = "";
+          const err = document.createElement("p");
+          err.className = "empty";
+          err.style.color = "#e85d75";
+          err.textContent = String(e.message || e);
+          bodyEl.appendChild(err);
+        }
+      }
+
+      async function runJobFromTable(jobId) {
+        const bodyEl = document.getElementById("job-results-body");
+        const placeholder = document.getElementById("job-results-placeholder");
+        placeholder.style.display = "none";
+        bodyEl.style.display = "block";
+        try {
+          await postRunJob(jobId);
+          await showJobResults(jobId);
+        } catch (e) {
+          stopJobPoll();
+          bodyEl.textContent = "";
+          const err = document.createElement("p");
+          err.className = "empty";
+          err.style.color = "#e85d75";
+          err.textContent = String(e.message || e);
+          bodyEl.appendChild(err);
+        }
       }
 
       function setHealth(ok, detail) {
@@ -728,7 +965,7 @@
             const table = document.createElement("table");
             const thead = document.createElement("thead");
             const hr = document.createElement("tr");
-            for (const h of ["ID", "Status", "URL", "Ref", "Created"]) {
+            for (const h of ["ID", "Status", "URL", "Ref", "Created", "Actions"]) {
               const th = document.createElement("th");
               th.textContent = h;
               hr.appendChild(th);
@@ -752,7 +989,23 @@
               c4.style.fontSize = "0.75rem";
               c4.style.color = "var(--muted)";
               c4.textContent = j.createdAt;
-              tr.append(c0, c1, c2, c3, c4);
+              const c5 = document.createElement("td");
+              c5.className = "job-actions";
+              if (j.status === "queued") {
+                const runBtn = document.createElement("button");
+                runBtn.type = "button";
+                runBtn.className = "btn-sm";
+                runBtn.textContent = "Run";
+                runBtn.addEventListener("click", () => runJobFromTable(j.jobId));
+                c5.appendChild(runBtn);
+              }
+              const viewBtn = document.createElement("button");
+              viewBtn.type = "button";
+              viewBtn.className = "btn-sm";
+              viewBtn.textContent = "View";
+              viewBtn.addEventListener("click", () => showJobResults(j.jobId));
+              c5.appendChild(viewBtn);
+              tr.append(c0, c1, c2, c3, c4, c5);
               tbody.appendChild(tr);
             }
             table.appendChild(tbody);
@@ -951,7 +1204,10 @@
           gitUrlInput.focus();
           return;
         }
-        const payload = refRaw.length > 0 ? { gitUrl, ref: refRaw } : { gitUrl };
+        const deferEl = document.getElementById("agent-defer-start");
+        const deferStart = deferEl instanceof HTMLInputElement && deferEl.checked;
+        const payload =
+          refRaw.length > 0 ? { gitUrl, ref: refRaw, deferStart } : { gitUrl, deferStart };
         for (const b of startBtns) {
           b.disabled = true;
         }

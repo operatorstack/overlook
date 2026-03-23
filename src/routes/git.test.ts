@@ -1,5 +1,8 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import request from "supertest";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { clearGitScanJobsForTests } from "../jobs/memoryJobStore.js";
 
@@ -31,9 +34,17 @@ async function pollJobBody(
 
 describe("git routes", () => {
   const app = createApp();
+  let testSinkDir: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     clearGitScanJobsForTests();
+    testSinkDir = await mkdtemp(join(tmpdir(), "overlook-git-route-sink-"));
+    process.env.OVERLOOK_JOB_SINK_DIR = testSinkDir;
+  });
+
+  afterEach(async () => {
+    delete process.env.OVERLOOK_JOB_SINK_DIR;
+    await rm(testSinkDir, { recursive: true, force: true });
   });
 
   it("POST /v1/git/jobs creates job", async () => {
@@ -72,6 +83,36 @@ describe("git routes", () => {
 
   it("POST rejects invalid body", async () => {
     await request(app).post("/v1/git/jobs").send({}).expect(400);
+  });
+
+  it("POST /v1/git/jobs with deferStart keeps job queued until run", async () => {
+    const created = await request(app)
+      .post("/v1/git/jobs")
+      .send({ gitUrl: "https://example.com/defer.git", deferStart: true })
+      .expect(201);
+    const jobId = created.body.jobId;
+    if (typeof jobId !== "string") {
+      throw new Error("expected jobId string");
+    }
+    const q = await request(app).get(`/v1/git/jobs/${encodeURIComponent(jobId)}`).expect(200);
+    expect(q.body.status).toBe("queued");
+    await request(app).post(`/v1/git/jobs/${encodeURIComponent(jobId)}/run`).expect(202);
+    const body = await pollJobBody(app, jobId, (s) => s === "failed" || s === "done");
+    expect(body.status).toBe("failed");
+  });
+
+  it("POST /v1/git/jobs/:jobId/run returns 409 when not queued", async () => {
+    const created = await request(app)
+      .post("/v1/git/jobs")
+      .send({ gitUrl: "https://example.com/y.git" })
+      .expect(201);
+    const jobId = created.body.jobId;
+    if (typeof jobId !== "string") {
+      throw new Error("expected jobId string");
+    }
+    await pollJobBody(app, jobId, (s) => s === "failed" || s === "done");
+    const res = await request(app).post(`/v1/git/jobs/${encodeURIComponent(jobId)}/run`).expect(409);
+    expect(typeof res.body.error).toBe("string");
   });
 
   it("GET /v1/git/jobs lists jobs", async () => {

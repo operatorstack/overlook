@@ -4,7 +4,7 @@ const tickets = new Map<string, ImplementationTicket>();
 
 const DEFAULT_AGENT_TITLE = "Implement agent pipeline (ingest → chunk → analyze → sink)";
 const DEFAULT_AGENT_BODY =
-  "Host runs ingest, chunk, and optional Anthropic analyze (when ANTHROPIC_API_KEY is set); findings are held on the job in memory. Next: durable sink, agent package split, and richer analysis policy per server/docs/agentic-subsystem.md.";
+  "Host runs ingest, chunk, and optional Anthropic analyze; terminal jobs are snapshotted as JSON under data/job-sink (or OVERLOOK_JOB_SINK_DIR) and reloaded on startup. Next: DB or operator sink, agent package split, richer analysis per server/docs/agentic-subsystem.md.";
 
 export function createImplementationTicket(input: {
   ticketId: string;
