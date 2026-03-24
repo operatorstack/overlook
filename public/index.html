@@ -3,608 +3,404 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Overlook server</title>
+    <title>Overlook</title>
     <style>
       :root {
         color-scheme: light dark;
         --bg: #0f1419;
+        --bg-raised: #151c24;
         --card: #1a2332;
         --border: #2d3a4d;
         --text: #e7ecf3;
         --muted: #8b9cb3;
         --ok: #3ecf8e;
         --warn: #f0c14b;
-        --ticket: #6b9fff;
+        --err: #e85d75;
+        --info: #6b9fff;
+        --tab-active: #e7ecf3;
+        --tab-inactive: #5c6b7f;
+        --badge-queued-bg: rgba(139,156,179,.15);
+        --badge-queued-fg: #8b9cb3;
+        --badge-progress-bg: rgba(107,159,255,.15);
+        --badge-progress-fg: #6b9fff;
+        --badge-done-bg: rgba(62,207,142,.12);
+        --badge-done-fg: #3ecf8e;
+        --badge-failed-bg: rgba(232,93,117,.12);
+        --badge-failed-fg: #e85d75;
+        --conf-high: #e85d75;
+        --conf-medium: #f0c14b;
+        --conf-low: #8b9cb3;
       }
       @media (prefers-color-scheme: light) {
         :root {
           --bg: #f4f6f9;
+          --bg-raised: #eef1f5;
           --card: #fff;
           --border: #d8dee8;
           --text: #1a2332;
           --muted: #5c6b7f;
+          --tab-active: #1a2332;
+          --tab-inactive: #8b9cb3;
+          --badge-queued-bg: rgba(92,107,127,.1);
+          --badge-progress-bg: rgba(107,159,255,.1);
+          --badge-done-bg: rgba(62,207,142,.08);
+          --badge-failed-bg: rgba(232,93,117,.08);
         }
       }
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; margin: 0; }
       body {
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        margin: 0;
-        padding: 1.25rem;
-        background: var(--bg);
-        color: var(--text);
-        line-height: 1.5;
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        background: var(--bg); color: var(--text);
+        line-height: 1.5; min-height: 100vh;
       }
-      h1 {
-        font-size: 1.35rem;
-        font-weight: 600;
-        margin: 0 0 0.25rem;
-      }
-      .sub {
-        color: var(--muted);
-        font-size: 0.9rem;
-        margin-bottom: 1.25rem;
-      }
-      .grid {
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-        margin-bottom: 1.25rem;
-      }
-      .card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 1rem 1.1rem;
-      }
-      .card h2 {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--muted);
-        margin: 0 0 0.65rem;
-        font-weight: 600;
-      }
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.85rem;
-        font-weight: 500;
-      }
-      .dot {
-        width: 0.5rem;
-        height: 0.5rem;
-        border-radius: 50%;
-        background: var(--muted);
-      }
-      .dot.ok {
-        background: var(--ok);
-      }
-      .dot.err {
-        background: #e85d75;
-      }
-      ul {
-        margin: 0;
-        padding-left: 1.1rem;
-        font-size: 0.9rem;
-      }
-      li {
-        margin: 0.25rem 0;
-      }
-      a {
-        color: inherit;
-      }
-      .docs a {
-        display: block;
-        margin: 0.2rem 0;
-        font-size: 0.9rem;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.8rem;
-      }
-      th,
-      td {
-        text-align: left;
-        padding: 0.35rem 0.5rem;
+      a { color: var(--info); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+
+      /* Header */
+      .header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.75rem 1.25rem;
         border-bottom: 1px solid var(--border);
-        vertical-align: top;
+        background: var(--card);
       }
+      .header-left { display: flex; align-items: baseline; gap: 0.6rem; }
+      .header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.01em; }
+      .header .version { font-size: 0.75rem; color: var(--muted); font-family: ui-monospace, monospace; }
+      .header-right { display: flex; align-items: center; gap: 0.75rem; }
+      .health-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+      .health-dot.ok { background: var(--ok); }
+      .health-dot.err { background: var(--err); }
+      .header-meta { font-size: 0.72rem; color: var(--muted); }
+
+      /* Tabs */
+      .tab-bar {
+        display: flex; gap: 0; padding: 0 1.25rem;
+        border-bottom: 1px solid var(--border);
+        background: var(--card);
+      }
+      .tab-btn {
+        background: none; border: none; border-bottom: 2px solid transparent;
+        padding: 0.6rem 1rem 0.5rem;
+        font: inherit; font-size: 0.82rem; font-weight: 600;
+        color: var(--tab-inactive); cursor: pointer;
+        transition: color .15s, border-color .15s;
+      }
+      .tab-btn:hover { color: var(--tab-active); }
+      .tab-btn.active { color: var(--tab-active); border-bottom-color: var(--info); }
+      .tab-panel { display: none; padding: 1.25rem; }
+      .tab-panel.active { display: block; }
+
+      /* Cards */
+      .card {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: 8px; padding: 0.85rem 1rem;
+      }
+      .card-title {
+        font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em;
+        color: var(--muted); font-weight: 700; margin-bottom: 0.5rem;
+      }
+      .card-grid {
+        display: grid; gap: 0.75rem;
+        grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+      }
+
+      /* Status badges */
+      .badge {
+        display: inline-block; padding: 0.15rem 0.5rem; border-radius: 9999px;
+        font-size: 0.7rem; font-weight: 600; letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+      .badge-queued { background: var(--badge-queued-bg); color: var(--badge-queued-fg); }
+      .badge-ingesting, .badge-chunking, .badge-chunked, .badge-analyzing {
+        background: var(--badge-progress-bg); color: var(--badge-progress-fg);
+      }
+      .badge-done { background: var(--badge-done-bg); color: var(--badge-done-fg); }
+      .badge-failed { background: var(--badge-failed-bg); color: var(--badge-failed-fg); }
+
+      /* Confidence badges */
+      .conf-badge { font-size: 0.68rem; font-weight: 600; }
+      .conf-high { color: var(--conf-high); }
+      .conf-medium { color: var(--conf-medium); }
+      .conf-low { color: var(--conf-low); }
+
+      /* Tables */
+      table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+      th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
       th {
-        color: var(--muted);
-        font-weight: 600;
+        color: var(--muted); font-weight: 600; font-size: 0.7rem;
+        text-transform: uppercase; letter-spacing: 0.04em;
+        position: sticky; top: 0; background: var(--card);
       }
-      .mono {
-        font-family: ui-monospace, monospace;
-        word-break: break-all;
+      th.sortable { cursor: pointer; user-select: none; }
+      th.sortable:hover { color: var(--text); }
+      th .sort-arrow { font-size: 0.6rem; margin-left: 0.2rem; opacity: 0.4; }
+      th.sort-active .sort-arrow { opacity: 1; color: var(--info); }
+      tbody tr { transition: background .1s; }
+      tbody tr:hover { background: var(--bg-raised); }
+      tbody tr.expandable { cursor: pointer; }
+      .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
+      .text-muted { color: var(--muted); }
+      .text-sm { font-size: 0.75rem; }
+
+      /* Inline expansion row */
+      .expand-row td { padding: 0; border-bottom: 1px solid var(--border); }
+      .expand-content {
+        padding: 0.75rem 1rem; background: var(--bg-raised);
+        border-top: 1px solid var(--border);
       }
-      button {
-        font: inherit;
-        padding: 0.35rem 0.75rem;
-        border-radius: 6px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-        cursor: pointer;
+      .expand-content dl { display: grid; grid-template-columns: auto 1fr; gap: 0.2rem 0.75rem; font-size: 0.8rem; }
+      .expand-content dt { color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; padding-top: 0.1rem; }
+      .expand-content dd { margin: 0; }
+
+      /* Buttons */
+      button, .btn {
+        font: inherit; padding: 0.3rem 0.65rem; border-radius: 6px;
+        border: 1px solid var(--border); background: var(--card);
+        color: var(--text); cursor: pointer; font-size: 0.78rem;
       }
-      button:hover {
-        filter: brightness(1.08);
+      button:hover { filter: brightness(1.06); }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      .btn-primary {
+        border-color: var(--info); font-weight: 600;
       }
-      button.btn-sm {
-        padding: 0.2rem 0.45rem;
-        font-size: 0.72rem;
-        margin-right: 0.35rem;
-        margin-bottom: 0.25rem;
+      .btn-scan {
+        border: 2px solid var(--ok); font-weight: 700; font-size: 0.88rem;
+        padding: 0.55rem 1.5rem; border-radius: 8px;
+        box-shadow: 0 1px 8px rgba(62,207,142,.12);
       }
-      .job-actions {
-        white-space: normal;
-        max-width: 10rem;
+      .btn-sm { padding: 0.15rem 0.4rem; font-size: 0.7rem; }
+
+      /* Scan form */
+      .scan-form { display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 0.75rem; }
+      .scan-field { display: flex; flex-direction: column; gap: 0.2rem; }
+      .scan-field label { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+      .scan-field input {
+        font: inherit; font-size: 0.82rem; padding: 0.4rem 0.55rem;
+        border-radius: 6px; border: 1px solid var(--border);
+        background: var(--bg); color: var(--text);
       }
-      .defer-start-row {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.5rem;
-        margin-top: 0.65rem;
-        max-width: 36rem;
-        font-size: 0.85rem;
-        color: var(--muted);
+      .scan-field.url-field { flex: 1; min-width: 16rem; }
+      .scan-field.url-field input { width: 100%; }
+      .scan-field.ref-field input { width: 8rem; }
+      .scan-options { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.75rem; }
+      .scan-options input[type="checkbox"] { width: auto; }
+      .scan-status { font-size: 0.82rem; min-height: 1.2rem; margin-bottom: 0.5rem; }
+      .scan-status.ok { color: var(--ok); }
+      .scan-status.err { color: var(--err); }
+
+      /* Findings */
+      .filter-bar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+      .filter-bar input {
+        font: inherit; font-size: 0.8rem; padding: 0.35rem 0.55rem;
+        border-radius: 6px; border: 1px solid var(--border);
+        background: var(--bg); color: var(--text); min-width: 14rem;
       }
-      .defer-start-row input {
-        margin-top: 0.2rem;
-        width: auto;
+      .chip {
+        display: inline-block; padding: 0.2rem 0.55rem; border-radius: 9999px;
+        font-size: 0.7rem; font-weight: 600; cursor: pointer;
+        border: 1px solid var(--border); background: var(--card); color: var(--muted);
+        transition: all .15s;
       }
+      .chip.active { border-color: var(--info); color: var(--info); background: rgba(107,159,255,.08); }
+      .chip:hover { border-color: var(--text); color: var(--text); }
       .finding-card {
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 0.65rem 0.75rem;
-        margin: 0.5rem 0;
-        font-size: 0.85rem;
+        border: 1px solid var(--border); border-radius: 8px;
+        padding: 0.7rem 0.85rem; margin-bottom: 0.5rem;
+        background: var(--card);
       }
-      .finding-card h4 {
-        margin: 0 0 0.35rem;
-        font-size: 0.9rem;
-        font-weight: 600;
+      .finding-card h4 { font-size: 0.88rem; font-weight: 600; margin-bottom: 0.3rem; }
+      .finding-meta { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.35rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+      .finding-card .angle { font-size: 0.82rem; margin-bottom: 0.25rem; font-style: italic; color: var(--muted); }
+      .finding-card .detail { font-size: 0.82rem; }
+      .findings-empty { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.88rem; }
+
+      /* Tickets form */
+      .ticket-form { max-width: 36rem; margin-bottom: 1rem; }
+      .ticket-form .field { margin-bottom: 0.5rem; }
+      .ticket-form label { display: block; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.2rem; }
+      .ticket-form input, .ticket-form textarea {
+        width: 100%; font: inherit; font-size: 0.82rem;
+        padding: 0.4rem 0.55rem; border-radius: 6px;
+        border: 1px solid var(--border); background: var(--bg); color: var(--text);
       }
-      .job-results-meta {
-        font-size: 0.85rem;
-        margin-bottom: 0.75rem;
+      .ticket-form textarea { min-height: 3.5rem; resize: vertical; }
+      .ticket-form .actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+      .ticket-status { font-size: 0.82rem; min-height: 1.2rem; margin-bottom: 0.75rem; }
+      .ticket-status.ok { color: var(--ok); }
+      .ticket-status.err { color: var(--err); }
+
+      /* System tab sections */
+      .sys-section { margin-bottom: 1.25rem; }
+      .sys-section h3 {
+        font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;
+        color: var(--muted); font-weight: 700; margin-bottom: 0.5rem;
       }
-      .job-results-meta dt {
-        color: var(--muted);
-        font-size: 0.72rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-top: 0.5rem;
-      }
-      .job-results-meta dd {
-        margin: 0.15rem 0 0;
-      }
-      .row {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-      }
-      .empty {
-        color: var(--muted);
-        font-size: 0.9rem;
-      }
+      .sys-section ul { padding-left: 1rem; font-size: 0.82rem; }
+      .sys-section li { margin: 0.2rem 0; }
+      .build-banner { border-left: 3px solid var(--ok); padding-left: 0.85rem; margin-bottom: 1rem; }
+      .build-banner .display { font-size: 0.95rem; font-weight: 600; }
+      .build-banner .audience { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
+      .build-banner .extra { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+      .docs-list a { display: block; font-size: 0.82rem; margin: 0.15rem 0; }
+
       details.history-entry {
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 0.5rem 0.75rem;
-        margin-bottom: 0.5rem;
-        background: rgba(0, 0, 0, 0.12);
+        border: 1px solid var(--border); border-radius: 8px;
+        padding: 0.45rem 0.7rem; margin-bottom: 0.4rem;
+        background: var(--bg-raised);
       }
-      @media (prefers-color-scheme: light) {
-        details.history-entry {
-          background: rgba(0, 0, 0, 0.03);
-        }
-      }
-      details.history-entry summary {
-        cursor: pointer;
-        font-weight: 500;
-        font-size: 0.9rem;
-      }
-      .history-raw {
-        max-height: 14rem;
-        overflow: auto;
-      }
-      .build-for-people {
-        border-left: 4px solid var(--ok);
-      }
-      .build-for-people h2 {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--ok);
-        margin: 0 0 0.5rem;
-        font-weight: 700;
-      }
-      #build-display {
-        font-size: 1.05rem;
-        font-weight: 600;
-        margin: 0;
-      }
-      #build-audience {
-        margin: 0 0 0.65rem;
-        font-size: 0.95rem;
-        color: var(--text);
-        max-width: 42rem;
-      }
-      #build-extra {
-        margin: 0.4rem 0 0;
-        font-size: 0.8rem;
-        color: var(--muted);
-      }
-      .agent-form label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--muted);
-        margin: 0.75rem 0 0.25rem;
-      }
-      .agent-form label:first-of-type {
-        margin-top: 0;
-      }
-      .agent-form input {
-        width: 100%;
-        max-width: 36rem;
-        font: inherit;
-        padding: 0.45rem 0.55rem;
-        border-radius: 6px;
-        border: 1px solid var(--border);
-        background: var(--bg);
-        color: var(--text);
-      }
-      .agent-form .form-actions {
-        margin-top: 0.85rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-      }
-      .btn-start-huge {
-        font: inherit;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.4rem;
-        width: 100%;
-        max-width: 22rem;
-        margin: 0.35rem 0 0.15rem;
-        padding: 0.9rem 1.35rem;
-        border-radius: 10px;
-        border: 2px solid var(--ok);
-        background: var(--card);
-        color: var(--text);
-        font-size: 1.08rem;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-        cursor: pointer;
-        box-shadow: 0 2px 12px rgba(62, 207, 142, 0.15);
-      }
-      .btn-start-huge:hover:not(:disabled) {
-        filter: brightness(1.08);
-      }
-      .btn-start-huge:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
-      }
-      .btn-start-huge .play {
-        font-size: 1.15rem;
-        line-height: 1;
-        opacity: 0.95;
-      }
-      #agent-status {
-        margin-top: 0.75rem;
-        font-size: 0.9rem;
-        min-height: 1.35rem;
-      }
-      #agent-status.ok {
-        color: var(--ok);
-      }
-      #agent-status.err {
-        color: #e85d75;
-      }
-      .ticket-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem;
-        align-items: flex-start;
-        margin: 0.5rem 0 0.75rem;
-      }
-      .btn-ticket-primary {
-        font: inherit;
-        padding: 0.65rem 1.1rem;
-        border-radius: 8px;
-        border: 2px solid var(--ticket);
-        background: var(--card);
-        color: var(--text);
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .btn-ticket-primary:hover:not(:disabled) {
-        filter: brightness(1.08);
-      }
-      .btn-ticket-primary:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
-      }
-      .ticket-custom label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--muted);
-        margin: 0.5rem 0 0.25rem;
-      }
-      .ticket-custom input,
-      .ticket-custom textarea {
-        width: 100%;
-        max-width: 36rem;
-        font: inherit;
-        padding: 0.45rem 0.55rem;
-        border-radius: 6px;
-        border: 1px solid var(--border);
-        background: var(--bg);
-        color: var(--text);
-      }
-      .ticket-custom textarea {
-        min-height: 4.5rem;
-        resize: vertical;
-      }
-      #ticket-status {
-        margin-top: 0.5rem;
-        font-size: 0.9rem;
-        min-height: 1.35rem;
-      }
-      #ticket-status.ok {
-        color: var(--ok);
-      }
-      #ticket-status.err {
-        color: #e85d75;
-      }
-      .copy-cmd-block {
-        margin: 0.75rem 0 0;
-        max-width: 42rem;
-      }
-      .copy-cmd-block > p.label {
-        margin: 0 0 0.25rem;
-        font-size: 0.72rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--muted);
-      }
-      .copy-cmd-row {
-        display: flex;
-        align-items: stretch;
-        gap: 0.45rem;
-        margin-bottom: 0.4rem;
-      }
-      .copy-cmd-row pre {
-        flex: 1;
-        margin: 0;
-        min-width: 0;
-        padding: 0.5rem 0.6rem;
-        font-size: 0.78rem;
-        line-height: 1.4;
-        border-radius: 6px;
-        border: 1px solid var(--border);
-        background: var(--bg);
-        color: var(--text);
-        overflow-x: auto;
-        white-space: pre-wrap;
-        word-break: break-all;
-      }
-      .copy-cmd-row button.copy-btn {
-        flex-shrink: 0;
-        align-self: center;
-        font: inherit;
-        font-size: 0.75rem;
-        padding: 0.35rem 0.65rem;
-        border-radius: 6px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-        cursor: pointer;
-      }
-      .copy-cmd-row button.copy-btn:hover {
-        filter: brightness(1.06);
+      details.history-entry summary { cursor: pointer; font-weight: 500; font-size: 0.85rem; }
+      .history-raw { max-height: 14rem; overflow: auto; font-size: 0.75rem; }
+
+      /* Empty state */
+      .empty { color: var(--muted); font-size: 0.85rem; }
+
+      /* Responsive */
+      @media (max-width: 640px) {
+        .scan-form { flex-direction: column; }
+        .scan-field.ref-field input { width: 100%; }
+        .tab-btn { padding: 0.5rem 0.6rem; font-size: 0.75rem; }
       }
     </style>
   </head>
   <body>
-    <h1>Overlook server</h1>
-    <p class="sub">What exists right now — live from the API.</p>
-
-    <div class="card build-for-people" id="build-banner">
-      <h2>Build — for people, not only developers</h2>
-      <p id="build-audience">…</p>
-      <p id="build-display">…</p>
-      <p id="build-extra"></p>
-    </div>
-
-    <div class="row" style="margin-bottom: 1rem">
-      <button type="button" id="refresh">Refresh</button>
-      <span class="muted" id="fetched" style="color: var(--muted); font-size: 0.85rem"></span>
-    </div>
-
-    <div class="grid">
-      <div class="card">
-        <h2>Health</h2>
-        <div id="health-pill" class="pill"><span class="dot"></span><span id="health-text">…</span></div>
+    <div class="header">
+      <div class="header-left">
+        <h1>Overlook</h1>
+        <span class="version" id="header-version"></span>
       </div>
-      <div class="card">
-        <h2>Service</h2>
-        <div id="service-meta" class="mono" style="font-size: 0.9rem">…</div>
-        <div id="llm-anthropic" class="empty" style="margin-top: 0.4rem; font-size: 0.8rem">…</div>
-      </div>
-      <div class="card">
-        <h2>Git jobs (memory)</h2>
-        <div id="job-count" style="font-size: 1.1rem; font-weight: 600">…</div>
-      </div>
-      <div class="card">
-        <h2>Implementation tickets</h2>
-        <div id="ticket-count" style="font-size: 1.1rem; font-weight: 600">…</div>
-        <p class="empty" style="margin: 0.35rem 0 0; font-size: 0.8rem">Track work to <strong>build the agent</strong></p>
+      <div class="header-right">
+        <span class="health-dot" id="health-dot"></span>
+        <span class="header-meta" id="header-llm"></span>
+        <span class="header-meta" id="header-updated"></span>
       </div>
     </div>
 
-    <div class="card" id="implementation-tickets" style="margin-top: 1rem; border-left: 4px solid var(--ticket)">
-      <h2 style="color: var(--ticket)">Build the agent — ticket system</h2>
-      <p class="empty" style="margin-top: 0; max-width: 46rem">
-        The <strong>scanning agent</strong> (clone, chunk, LLM analysis) is <strong>not implemented</strong> in code yet.
-        This is only a <strong>ticket queue</strong> (in-memory) so you can record that the work should start — not the agent itself.
-        When you implement it, use <span class="mono">docs/agentic-subsystem.md</span> and your normal PR / <span class="mono">BUILD_LOG.md</span> flow.
-      </p>
-      <div class="ticket-actions">
-        <button type="button" class="btn-ticket-primary" id="ticket-create-pipeline">
-          Create ticket — build agent pipeline
-        </button>
-      </div>
-      <p class="empty" style="margin: 0 0 0.35rem; font-size: 0.85rem">Or open a custom ticket:</p>
-      <form class="ticket-custom" id="ticket-custom-form">
-        <label for="ticket-custom-title">Title</label>
-        <input id="ticket-custom-title" type="text" placeholder="Short summary" maxlength="500" required />
-        <label for="ticket-custom-body">Notes (optional)</label>
-        <textarea id="ticket-custom-body" placeholder="Context, links, acceptance hints…" maxlength="8000"></textarea>
-        <div class="ticket-actions">
-          <button type="submit" class="btn-ticket-primary" id="ticket-create-custom">Create custom ticket</button>
+    <nav class="tab-bar" id="tab-bar">
+      <button class="tab-btn active" data-tab="scan">Scan</button>
+      <button class="tab-btn" data-tab="findings">Findings</button>
+      <button class="tab-btn" data-tab="tickets">Tickets</button>
+      <button class="tab-btn" data-tab="system">System</button>
+    </nav>
+
+    <!-- ===== SCAN TAB ===== -->
+    <section class="tab-panel active" id="panel-scan">
+      <form class="scan-form" id="scan-form" autocomplete="off">
+        <div class="scan-field url-field">
+          <label for="scan-url">Git URL</label>
+          <input id="scan-url" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+            placeholder="https://github.com/org/repo.git" required />
         </div>
+        <div class="scan-field ref-field">
+          <label for="scan-ref">Ref</label>
+          <input id="scan-ref" type="text" placeholder="main" />
+        </div>
+        <button type="submit" class="btn-scan" id="scan-start">Start scan</button>
       </form>
-      <div id="ticket-status" aria-live="polite"></div>
-      <div class="copy-cmd-block">
-        <p class="label">Copy commands — run in server folder, API must be running</p>
-        <p class="empty" style="margin: 0 0 0.5rem; font-size: 0.82rem">
-          Edit <a href="/docs/NEXT.md" target="_blank" rel="noopener">docs/NEXT.md</a> before using the draft line (<span class="mono">Title:</span> required).
-        </p>
-        <p class="label">Default pipeline ticket</p>
-        <div class="copy-cmd-row">
-          <pre class="mono" id="copy-cmd-ticket-default">npm run ticket</pre>
-          <button type="button" class="copy-btn" data-copy-for="copy-cmd-ticket-default">Copy</button>
-        </div>
-        <p class="label">Ticket from NEXT.md</p>
-        <div class="copy-cmd-row">
-          <pre class="mono" id="copy-cmd-ticket-draft">npm run ticket -- draft</pre>
-          <button type="button" class="copy-btn" data-copy-for="copy-cmd-ticket-draft">Copy</button>
-        </div>
-        <p class="label">Custom title only (edit after paste)</p>
-        <div class="copy-cmd-row">
-          <pre class="mono" id="copy-cmd-ticket-custom">npm run cli -- ticket Your title here</pre>
-          <button type="button" class="copy-btn" data-copy-for="copy-cmd-ticket-custom">Copy</button>
-        </div>
+      <div class="scan-options">
+        <input type="checkbox" id="scan-defer" />
+        <label for="scan-defer" style="cursor:pointer">Queue only (start manually)</label>
       </div>
-      <h3 style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 1rem 0 0.5rem">
-        Open tickets
-      </h3>
-      <div id="tickets-table"></div>
-    </div>
-
-    <div class="card" id="agent" style="margin-top: 1rem; border-left: 4px solid var(--warn)">
-      <h2 style="color: var(--warn)">Agent — start here</h2>
-      <p class="empty" style="margin-top: 0; max-width: 44rem">
-        Queue a <strong>git scan job</strong> from the browser (same as
-        <span class="mono">npm run cli -- scan …</span>). The server clones the repo in the background
-        (<span class="mono">ingesting</span> → <span class="mono">chunking</span> → <span class="mono">analyzing</span> →
-        <span class="mono">done</span> or <span class="mono">failed</span>). With <span class="mono">ANTHROPIC_API_KEY</span>
-        set, the host calls Anthropic once over a capped subset of units; otherwise analyze is skipped and findings stay
-        empty. Durable sink (DB) and the versioned agent package are <strong>not</strong> done yet.
-      </p>
-      <button type="submit" form="agent-form" class="btn-start-huge" id="agent-start-top">
-        <span class="play" aria-hidden="true">▶</span> Start scan
-      </button>
-      <p class="empty" style="margin: 0 0 0.85rem; font-size: 0.88rem; max-width: 44rem">
-        Enter the <strong>git URL</strong> (and optional <strong>ref</strong>) below, then press <strong>Start scan</strong>.
-      </p>
-      <form class="agent-form" id="agent-form" autocomplete="off">
-        <label for="agent-git-url">Git remote URL</label>
-        <input
-          id="agent-git-url"
-          name="gitUrl"
-          type="text"
-          inputmode="url"
-          autocomplete="off"
-          spellcheck="false"
-          placeholder="https://github.com/org/repo.git or git@github.com:org/repo.git"
-          required
-        />
-        <label for="agent-ref">Ref (optional)</label>
-        <input id="agent-ref" name="ref" type="text" placeholder="main" />
-        <div class="defer-start-row">
-          <input type="checkbox" id="agent-defer-start" name="deferStart" />
-          <label for="agent-defer-start" style="margin: 0; font-weight: 400; text-transform: none; letter-spacing: normal">
-            Queue only — start the pipeline with <strong>Run</strong> in the job table below (otherwise it starts
-            immediately).
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn-start-huge" id="agent-start">
-            <span class="play" aria-hidden="true">▶</span> Start scan
-          </button>
-        </div>
-      </form>
-      <div id="agent-status" aria-live="polite"></div>
-    </div>
-
-    <div class="grid">
-      <div class="card">
-        <h2>Implemented</h2>
-        <ul id="implemented"></ul>
-      </div>
-      <div class="card">
-        <h2>Not implemented yet</h2>
-        <ul id="not-implemented"></ul>
-      </div>
-      <div class="card docs">
-        <h2>Docs in repo</h2>
-        <div id="doc-links"></div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top: 1rem">
-      <h2>Registered git jobs</h2>
+      <div class="scan-status" id="scan-status" aria-live="polite"></div>
       <div id="jobs-table"></div>
-    </div>
+    </section>
 
-    <div class="card" style="margin-top: 1rem" id="job-results-panel">
-      <h2>Job results</h2>
-      <p class="empty" id="job-results-placeholder">
-        Choose <strong>View</strong> on a row to load results here. For manual start, enable <strong>Queue only</strong>
-        above, submit, then press <strong>Run</strong>.
-      </p>
-      <div id="job-results-body" style="display: none"></div>
-    </div>
+    <!-- ===== FINDINGS TAB ===== -->
+    <section class="tab-panel" id="panel-findings">
+      <div class="filter-bar" id="findings-filter-bar">
+        <input type="text" id="findings-search" placeholder="Search findings..." />
+        <span class="chip active" data-conf="all">All</span>
+        <span class="chip" data-conf="high">High</span>
+        <span class="chip" data-conf="medium">Medium</span>
+        <span class="chip" data-conf="low">Low</span>
+      </div>
+      <div id="findings-list"></div>
+    </section>
 
-    <div class="card" style="margin-top: 1rem">
-      <h2>Build history</h2>
-      <p class="empty" style="margin-top: 0">
-        Parsed from <span class="mono">BUILD_LOG.md</span> — newest first. Append entries per
-        <a href="/docs/build-log.md" target="_blank" rel="noopener">docs/build-log.md</a>.
-      </p>
-      <div id="build-history"></div>
-    </div>
+    <!-- ===== TICKETS TAB ===== -->
+    <section class="tab-panel" id="panel-tickets">
+      <div class="ticket-form" id="ticket-section">
+        <div class="actions" style="margin-bottom:0.75rem">
+          <button type="button" class="btn-primary" id="ticket-pipeline-btn">Create pipeline ticket</button>
+        </div>
+        <form id="ticket-custom-form">
+          <div class="field">
+            <label for="ticket-title">Custom ticket title</label>
+            <input id="ticket-title" type="text" placeholder="Short summary" maxlength="500" required />
+          </div>
+          <div class="field">
+            <label for="ticket-body">Notes (optional)</label>
+            <textarea id="ticket-body" placeholder="Context, links, acceptance hints..." maxlength="8000"></textarea>
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn-primary">Create custom ticket</button>
+          </div>
+        </form>
+      </div>
+      <div class="ticket-status" id="ticket-status" aria-live="polite"></div>
+      <div id="tickets-table"></div>
+    </section>
+
+    <!-- ===== SYSTEM TAB ===== -->
+    <section class="tab-panel" id="panel-system">
+      <div class="build-banner" id="build-banner">
+        <div class="display" id="build-display"></div>
+        <div class="audience" id="build-audience"></div>
+        <div class="extra" id="build-extra"></div>
+      </div>
+
+      <div class="card-grid sys-section">
+        <div class="card">
+          <div class="card-title">Health</div>
+          <div id="sys-health" style="font-size:0.88rem"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">LLM (Anthropic)</div>
+          <div id="sys-llm" style="font-size:0.82rem"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Counts</div>
+          <div id="sys-counts" style="font-size:0.82rem"></div>
+        </div>
+      </div>
+
+      <div class="sys-section">
+        <h3>Docs</h3>
+        <div class="docs-list" id="sys-docs"></div>
+      </div>
+
+      <div class="card-grid sys-section">
+        <div class="card">
+          <div class="card-title">Implemented</div>
+          <ul id="sys-implemented"></ul>
+        </div>
+        <div class="card">
+          <div class="card-title">Not yet implemented</div>
+          <ul id="sys-not-implemented"></ul>
+        </div>
+      </div>
+
+      <div class="sys-section">
+        <h3>Build history</h3>
+        <div class="empty" style="margin-bottom:0.4rem">
+          Parsed from <span class="mono">BUILD_LOG.md</span> &mdash;
+          <a href="/BUILD_LOG.md" target="_blank" rel="noopener">open raw</a>
+        </div>
+        <div id="build-history"></div>
+      </div>
+    </section>
 
     <script>
+    (function () {
+      "use strict";
+
+      /* ─── Helpers ─── */
+
       async function fetchJson(url) {
         const res = await fetch(url);
         const text = await res.text();
         let data;
-        try {
-          data = JSON.parse(text);
-        } catch {
-          throw new Error(text.slice(0, 200));
-        }
-        if (!res.ok) {
-          throw new Error(data.error || res.statusText);
-        }
+        try { data = JSON.parse(text); } catch { throw new Error(text.slice(0, 200)); }
+        if (!res.ok) { throw new Error(data.error || res.statusText); }
         return data;
       }
 
@@ -616,624 +412,642 @@
         });
         const text = await res.text();
         let data;
-        try {
-          data = JSON.parse(text);
-        } catch {
-          throw new Error(text.slice(0, 200));
-        }
-        if (!res.ok) {
-          const msg = typeof data.error === "string" ? data.error : res.statusText;
-          throw new Error(msg);
-        }
+        try { data = JSON.parse(text); } catch { throw new Error(text.slice(0, 200)); }
+        if (!res.ok) { throw new Error(typeof data.error === "string" ? data.error : res.statusText); }
         return data;
       }
 
-      let jobPollTimer = null;
+      function $(sel) { return document.querySelector(sel); }
+      function $$(sel) { return document.querySelectorAll(sel); }
+
+      function el(tag, attrs, children) {
+        const e = document.createElement(tag);
+        if (attrs) {
+          for (const [k, v] of Object.entries(attrs)) {
+            if (k === "textContent") { e.textContent = v; }
+            else if (k === "innerHTML") { e.innerHTML = v; }
+            else if (k === "className") { e.className = v; }
+            else if (k === "style" && typeof v === "object") { Object.assign(e.style, v); }
+            else { e.setAttribute(k, v); }
+          }
+        }
+        if (children) {
+          for (const c of children) {
+            if (typeof c === "string") { e.appendChild(document.createTextNode(c)); }
+            else if (c) { e.appendChild(c); }
+          }
+        }
+        return e;
+      }
+
+      function relativeTime(iso) {
+        const d = new Date(iso);
+        const diff = Date.now() - d.getTime();
+        if (diff < 0) { return "just now"; }
+        const s = Math.floor(diff / 1000);
+        if (s < 60) { return s + "s ago"; }
+        const m = Math.floor(s / 60);
+        if (m < 60) { return m + "m ago"; }
+        const h = Math.floor(m / 60);
+        if (h < 24) { return h + "h ago"; }
+        const days = Math.floor(h / 24);
+        return days + "d ago";
+      }
+
+      function statusBadge(status) {
+        const cls = "badge badge-" + (
+          status === "done" ? "done" :
+          status === "failed" ? "failed" :
+          status === "queued" ? "queued" :
+          "ingesting"
+        );
+        return el("span", { className: cls, textContent: status });
+      }
+
+      function confBadge(conf) {
+        return el("span", { className: "conf-badge conf-" + conf, textContent: conf });
+      }
+
+      function isTerminal(s) { return s === "done" || s === "failed"; }
+
+      /* ─── Tab navigation ─── */
+
+      const tabs = $$(".tab-btn");
+      const panels = $$(".tab-panel");
+
+      function switchTab(name) {
+        tabs.forEach(function (t) { t.classList.toggle("active", t.dataset.tab === name); });
+        panels.forEach(function (p) { p.classList.toggle("active", p.id === "panel-" + name); });
+        history.replaceState(null, "", "#" + name);
+      }
+
+      tabs.forEach(function (t) {
+        t.addEventListener("click", function () { switchTab(t.dataset.tab); });
+      });
+
+      function initTabFromHash() {
+        const h = location.hash.slice(1);
+        if (["scan", "findings", "tickets", "system"].indexOf(h) !== -1) {
+          switchTab(h);
+        }
+      }
+      window.addEventListener("hashchange", initTabFromHash);
+      initTabFromHash();
+
+      /* ─── Sortable table helper ─── */
+
+      function makeSortableTable(containerId, columns, dataFn, renderRowFn, options) {
+        let sortCol = options && options.defaultSort ? options.defaultSort : null;
+        let sortAsc = options && options.defaultAsc !== undefined ? options.defaultAsc : true;
+
+        function render() {
+          const container = document.getElementById(containerId);
+          container.textContent = "";
+          const data = dataFn();
+          if (data.length === 0) {
+            container.appendChild(el("p", { className: "empty", textContent: options && options.emptyText ? options.emptyText : "No data." }));
+            return;
+          }
+
+          let sorted = data.slice();
+          if (sortCol !== null) {
+            const col = columns.find(function (c) { return c.key === sortCol; });
+            if (col && col.sortFn) {
+              sorted.sort(function (a, b) {
+                const v = col.sortFn(a, b);
+                return sortAsc ? v : -v;
+              });
+            }
+          }
+
+          const table = el("table");
+          const thead = el("thead");
+          const hr = el("tr");
+          for (const col of columns) {
+            const th = el("th");
+            th.textContent = col.label;
+            if (col.sortFn) {
+              th.classList.add("sortable");
+              if (sortCol === col.key) {
+                th.classList.add("sort-active");
+              }
+              const arrow = el("span", { className: "sort-arrow", textContent: sortCol === col.key ? (sortAsc ? "\u25B2" : "\u25BC") : "\u25B2" });
+              th.appendChild(arrow);
+              th.addEventListener("click", function () {
+                if (sortCol === col.key) { sortAsc = !sortAsc; }
+                else { sortCol = col.key; sortAsc = true; }
+                render();
+              });
+            }
+            hr.appendChild(th);
+          }
+          thead.appendChild(hr);
+          table.appendChild(thead);
+
+          const tbody = el("tbody");
+          for (const item of sorted) {
+            const rows = renderRowFn(item);
+            if (Array.isArray(rows)) {
+              for (const r of rows) { tbody.appendChild(r); }
+            } else {
+              tbody.appendChild(rows);
+            }
+          }
+          table.appendChild(tbody);
+          container.appendChild(table);
+        }
+
+        return { render: render };
+      }
+
+      /* ─── State ─── */
+
+      var jobsData = [];
+      var allFindings = [];
+      var ticketsData = [];
+      var expandedJobId = null;
+      var expandedJobDetail = null;
+      var jobPollTimer = null;
+      var listPollTimer = null;
+
+      /* ─── Scan tab ─── */
 
       function stopJobPoll() {
-        if (jobPollTimer !== null) {
-          clearInterval(jobPollTimer);
-          jobPollTimer = null;
+        if (jobPollTimer !== null) { clearInterval(jobPollTimer); jobPollTimer = null; }
+      }
+      function stopListPoll() {
+        if (listPollTimer !== null) { clearInterval(listPollTimer); listPollTimer = null; }
+      }
+
+      function startListPollIfNeeded() {
+        stopListPoll();
+        var hasActive = jobsData.some(function (j) { return !isTerminal(j.status); });
+        if (hasActive) {
+          listPollTimer = setInterval(function () { loadJobs(); }, 3000);
         }
       }
 
-      function isTerminalStatus(s) {
-        return s === "done" || s === "failed";
-      }
+      var jobsTable = makeSortableTable("jobs-table",
+        [
+          { key: "status", label: "Status", sortFn: function (a, b) { return a.status.localeCompare(b.status); } },
+          { key: "gitUrl", label: "Repository", sortFn: function (a, b) { return a.gitUrl.localeCompare(b.gitUrl); } },
+          { key: "ref", label: "Ref" },
+          { key: "findingCount", label: "Findings", sortFn: function (a, b) { return (a.findingCount || 0) - (b.findingCount || 0); } },
+          { key: "modelUsed", label: "Model" },
+          { key: "createdAt", label: "Created", sortFn: function (a, b) { return new Date(a.createdAt) - new Date(b.createdAt); } },
+          { key: "actions", label: "" },
+        ],
+        function () { return jobsData; },
+        renderJobRow,
+        { defaultSort: "createdAt", defaultAsc: false, emptyText: "No scan jobs yet. Enter a git URL above to start." }
+      );
 
-      async function postRunJob(jobId) {
-        const res = await fetch("/v1/git/jobs/" + encodeURIComponent(jobId) + "/run", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: "{}",
+      function renderJobRow(j) {
+        var isExpanded = expandedJobId === j.jobId;
+        var tr = el("tr", { className: "expandable" });
+        tr.addEventListener("click", function (e) {
+          if (e.target.tagName === "BUTTON") { return; }
+          toggleExpand(j.jobId);
         });
-        const text = await res.text();
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch {
-          throw new Error(text.slice(0, 200));
+
+        tr.appendChild(el("td", {}, [statusBadge(j.status)]));
+        tr.appendChild(el("td", { className: "mono", textContent: j.gitUrl }));
+        tr.appendChild(el("td", { textContent: j.ref || "\u2014" }));
+
+        var fc = j.findingCount !== undefined ? String(j.findingCount) : "\u2014";
+        if (j.analyzeSkipped) { fc = "skipped"; }
+        tr.appendChild(el("td", { textContent: fc }));
+
+        tr.appendChild(el("td", { className: "mono text-sm", textContent: j.modelUsed ? j.modelUsed.replace(/^claude-/, "") : "\u2014" }));
+
+        var timeEl = el("td", { className: "text-muted text-sm", textContent: relativeTime(j.createdAt), title: j.createdAt });
+        tr.appendChild(timeEl);
+
+        var actTd = el("td");
+        if (j.status === "queued") {
+          var runBtn = el("button", { className: "btn-sm", textContent: "Run" });
+          runBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            runJob(j.jobId);
+          });
+          actTd.appendChild(runBtn);
         }
-        if (res.status === 202) {
-          return data;
+        tr.appendChild(actTd);
+
+        var rows = [tr];
+        if (isExpanded) {
+          rows.push(renderExpandRow(j));
         }
-        const msg = typeof data.error === "string" ? data.error : res.statusText;
-        throw new Error(msg);
+        return rows;
       }
 
-      function renderJobResults(container, job) {
-        container.textContent = "";
-        const wrap = document.createElement("div");
-        const idLine = document.createElement("p");
-        idLine.className = "mono";
-        idLine.style.fontSize = "0.8rem";
-        idLine.style.color = "var(--muted)";
-        idLine.textContent = "jobId: " + job.jobId;
-        wrap.appendChild(idLine);
-        const dl = document.createElement("dl");
-        dl.className = "job-results-meta";
-        function addRow(label, value) {
-          if (value === undefined || value === null || value === "") {
-            return;
+      function renderExpandRow(j) {
+        var tr = el("tr", { className: "expand-row" });
+        var td = el("td", { colSpan: "7" });
+        var wrap = el("div", { className: "expand-content" });
+
+        if (expandedJobDetail === null || expandedJobDetail.jobId !== j.jobId) {
+          wrap.appendChild(el("p", { className: "text-muted", textContent: "Loading..." }));
+          loadJobDetail(j.jobId);
+        } else {
+          var detail = expandedJobDetail;
+          var dl = el("dl");
+          function addDl(label, value) {
+            if (value === undefined || value === null || value === "") { return; }
+            dl.appendChild(el("dt", { textContent: label }));
+            dl.appendChild(el("dd", { textContent: String(value) }));
           }
-          const dt = document.createElement("dt");
-          dt.textContent = label;
-          const dd = document.createElement("dd");
-          if (label === "Status") {
-            const strong = document.createElement("strong");
-            strong.textContent = String(value);
-            dd.appendChild(strong);
-          } else {
-            dd.textContent = String(value);
-          }
-          dl.appendChild(dt);
-          dl.appendChild(dd);
-        }
-        addRow("Status", job.status);
-        addRow("Note", job.agentNote);
-        if (job.lastError) {
-          addRow("Error", job.lastError);
-        }
-        addRow("Commit", job.resolvedCommit);
-        if (job.reviewUnitCount !== undefined) {
-          addRow("Review units", String(job.reviewUnitCount));
-        }
-        if (job.reviewUnitScanTruncated) {
-          addRow("Scan", "Unit list truncated at cap");
-        }
-        if (job.reviewUnitsTruncatedInResponse) {
-          addRow("API", "Review units truncated in this response");
-        }
-        if (job.findingCount !== undefined) {
-          addRow("Findings", String(job.findingCount));
-        }
-        if (job.analyzeSkipped) {
-          addRow("Analyze", "Skipped (LLM not configured or not invoked)");
-        }
-        if (job.findingsTruncatedInResponse) {
-          addRow("API", "Findings truncated in this response");
-        }
-        wrap.appendChild(dl);
-        if (Array.isArray(job.findings) && job.findings.length > 0) {
-          const fh = document.createElement("h3");
-          fh.style.fontSize = "0.75rem";
-          fh.style.textTransform = "uppercase";
-          fh.style.color = "var(--muted)";
-          fh.style.marginTop = "0.75rem";
-          fh.textContent = "Findings";
-          wrap.appendChild(fh);
-          for (const f of job.findings) {
-            const card = document.createElement("div");
-            card.className = "finding-card";
-            const h = document.createElement("h4");
-            h.textContent = f.title || "(no title)";
-            card.appendChild(h);
-            const meta = document.createElement("div");
-            meta.style.fontSize = "0.75rem";
-            meta.style.color = "var(--muted)";
-            meta.textContent = (f.confidence || "") + " · " + (f.evidencePath || "");
-            card.appendChild(meta);
-            const ang = document.createElement("p");
-            ang.style.margin = "0.35rem 0 0";
-            ang.textContent = f.angle || "";
-            card.appendChild(ang);
-            const det = document.createElement("p");
-            det.style.margin = "0.35rem 0 0";
-            det.textContent = f.detail || "";
-            card.appendChild(det);
-            wrap.appendChild(card);
+          addDl("Status", detail.status);
+          addDl("Note", detail.agentNote);
+          if (detail.lastError) { addDl("Error", detail.lastError); }
+          addDl("Commit", detail.resolvedCommit);
+          if (detail.reviewUnitCount !== undefined) { addDl("Review units", detail.reviewUnitCount); }
+          if (detail.modelUsed) { addDl("Model", detail.modelUsed); }
+          wrap.appendChild(dl);
+
+          if (Array.isArray(detail.findings) && detail.findings.length > 0) {
+            wrap.appendChild(el("h4", {
+              className: "card-title",
+              textContent: "Findings (" + detail.findings.length + ")",
+              style: { marginTop: "0.75rem" },
+            }));
+            for (var f of detail.findings) {
+              wrap.appendChild(renderFindingCard(f, j));
+            }
           }
         }
-        container.appendChild(wrap);
+
+        td.appendChild(wrap);
+        tr.appendChild(td);
+        return tr;
       }
 
-      async function showJobResults(jobId) {
-        stopJobPoll();
-        const placeholder = document.getElementById("job-results-placeholder");
-        const bodyEl = document.getElementById("job-results-body");
-        placeholder.style.display = "none";
-        bodyEl.style.display = "block";
-        bodyEl.textContent = "Loading…";
-        try {
-          const job = await fetchJson("/v1/git/jobs/" + encodeURIComponent(jobId));
-          renderJobResults(bodyEl, job);
-          if (!isTerminalStatus(job.status)) {
-            jobPollTimer = setInterval(async () => {
-              try {
-                const j2 = await fetchJson("/v1/git/jobs/" + encodeURIComponent(jobId));
-                renderJobResults(bodyEl, j2);
-                if (isTerminalStatus(j2.status)) {
-                  stopJobPoll();
-                  await load();
-                }
-              } catch {
-                stopJobPoll();
-              }
-            }, 900);
-          }
-        } catch (e) {
-          bodyEl.textContent = "";
-          const err = document.createElement("p");
-          err.className = "empty";
-          err.style.color = "#e85d75";
-          err.textContent = String(e.message || e);
-          bodyEl.appendChild(err);
-        }
-      }
-
-      async function runJobFromTable(jobId) {
-        const bodyEl = document.getElementById("job-results-body");
-        const placeholder = document.getElementById("job-results-placeholder");
-        placeholder.style.display = "none";
-        bodyEl.style.display = "block";
-        try {
-          await postRunJob(jobId);
-          await showJobResults(jobId);
-        } catch (e) {
+      function toggleExpand(jobId) {
+        if (expandedJobId === jobId) {
+          expandedJobId = null;
+          expandedJobDetail = null;
           stopJobPoll();
-          bodyEl.textContent = "";
-          const err = document.createElement("p");
-          err.className = "empty";
-          err.style.color = "#e85d75";
-          err.textContent = String(e.message || e);
-          bodyEl.appendChild(err);
+        } else {
+          expandedJobId = jobId;
+          expandedJobDetail = null;
+          stopJobPoll();
+        }
+        jobsTable.render();
+      }
+
+      async function loadJobDetail(jobId) {
+        try {
+          var detail = await fetchJson("/v1/git/jobs/" + encodeURIComponent(jobId));
+          if (expandedJobId === jobId) {
+            expandedJobDetail = detail;
+            jobsTable.render();
+            if (!isTerminal(detail.status)) {
+              jobPollTimer = setInterval(async function () {
+                try {
+                  var d2 = await fetchJson("/v1/git/jobs/" + encodeURIComponent(jobId));
+                  if (expandedJobId === jobId) {
+                    expandedJobDetail = d2;
+                    jobsTable.render();
+                    if (isTerminal(d2.status)) {
+                      stopJobPoll();
+                      loadJobs();
+                    }
+                  }
+                } catch { stopJobPoll(); }
+              }, 1200);
+            }
+          }
+        } catch { /* ignore */ }
+      }
+
+      async function runJob(jobId) {
+        try {
+          await postJson("/v1/git/jobs/" + encodeURIComponent(jobId) + "/run", {});
+          expandedJobId = jobId;
+          expandedJobDetail = null;
+          await loadJobs();
+        } catch (e) {
+          var s = $("#scan-status");
+          s.className = "scan-status err";
+          s.textContent = String(e.message || e);
         }
       }
 
-      function setHealth(ok, detail) {
-        const dot = document.querySelector("#health-pill .dot");
-        const text = document.getElementById("health-text");
-        dot.classList.toggle("ok", ok);
-        dot.classList.toggle("err", !ok);
-        text.textContent = detail;
+      async function loadJobs() {
+        try {
+          var list = await fetchJson("/v1/git/jobs");
+          jobsData = list.jobs;
+          jobsTable.render();
+          startListPollIfNeeded();
+          collectAllFindings();
+        } catch { /* ignore */ }
       }
 
-      async function load() {
-        document.getElementById("fetched").textContent = "";
-        try {
-          await fetchJson("/health");
-          setHealth(true, "OK — /health");
-        } catch (e) {
-          setHealth(false, String(e.message || e));
-        }
-
-        try {
-          const info = await fetchJson("/api/info");
-          document.getElementById("service-meta").textContent = info.service + " v" + info.version;
-          document.getElementById("job-count").textContent = String(info.jobsRegistered) + " registered";
-          document.getElementById("ticket-count").textContent =
-            String(info.implementationTicketsOpen ?? 0) + " open";
-
-          const llmEl = document.getElementById("llm-anthropic");
-          if (info.llm && info.llm.anthropic) {
-            const a = info.llm.anthropic;
-            llmEl.textContent =
-              "Anthropic LLM: " +
-              (a.configured ? "API key set" : "not configured") +
-              " · base " +
-              a.baseUrl;
-          } else {
-            llmEl.textContent = "";
-          }
-
-          const b = info.build;
-          if (b && typeof b === "object") {
-            document.getElementById("build-audience").textContent = b.audienceNote;
-            document.getElementById("build-display").textContent = b.displayLine;
-            const bits = [];
-            if (typeof b.gitCommit === "string" && b.gitCommit.length > 0) {
-              bits.push("Commit " + b.gitCommit);
-            }
-            if (typeof b.buildId === "string" && b.buildId.length > 0) {
-              bits.push("Build ID " + b.buildId);
-            }
-            bits.push("Node " + b.nodeVersion);
-            bits.push(b.environment);
-            document.getElementById("build-extra").textContent = bits.join(" · ");
-          }
-
-          const impl = document.getElementById("implemented");
-          impl.innerHTML = "";
-          for (const item of info.implemented) {
-            const li = document.createElement("li");
-            if (item.path) {
-              li.textContent = item.name + " — " + (item.method ? item.method + " " : "") + item.path;
-            } else {
-              li.textContent = item.name + (item.hint ? " — " + item.hint : "");
-            }
-            impl.appendChild(li);
-          }
-
-          const ni = document.getElementById("not-implemented");
-          ni.innerHTML = "";
-          for (const item of info.notImplemented) {
-            const li = document.createElement("li");
-            const strong = document.createElement("strong");
-            strong.textContent = item.name;
-            li.appendChild(strong);
-            li.appendChild(document.createTextNode(" — " + item.detail));
-            ni.appendChild(li);
-          }
-
-          const docs = document.getElementById("doc-links");
-          docs.innerHTML = "";
-          for (const d of info.repositoryDocs) {
-            const a = document.createElement("a");
-            a.href = d.href;
-            a.textContent = d.label;
-            a.target = "_blank";
-            a.rel = "noopener";
-            docs.appendChild(a);
-          }
-        } catch (e) {
-          document.getElementById("service-meta").textContent = "Error: " + (e.message || e);
-          document.getElementById("ticket-count").textContent = "—";
-        }
-
-        const ticketsWrap = document.getElementById("tickets-table");
-        ticketsWrap.textContent = "";
-        try {
-          const tlist = await fetchJson("/v1/tickets");
-          if (tlist.tickets.length === 0) {
-            const p = document.createElement("p");
-            p.className = "empty";
-            p.appendChild(document.createTextNode("No tickets yet. Use "));
-            const a = document.createElement("a");
-            a.href = "#implementation-tickets";
-            a.textContent = "Create ticket — build agent pipeline";
-            p.appendChild(a);
-            p.appendChild(document.createTextNode(" above."));
-            ticketsWrap.appendChild(p);
-          } else {
-            const table = document.createElement("table");
-            const thead = document.createElement("thead");
-            const hr = document.createElement("tr");
-            for (const h of ["ID", "Kind", "Title", "Created"]) {
-              const th = document.createElement("th");
-              th.textContent = h;
-              hr.appendChild(th);
-            }
-            thead.appendChild(hr);
-            table.appendChild(thead);
-            const tbody = document.createElement("tbody");
-            for (const t of tlist.tickets) {
-              const tr = document.createElement("tr");
-              const c0 = document.createElement("td");
-              c0.className = "mono";
-              c0.textContent = t.ticketId.slice(0, 8) + "…";
-              const c1 = document.createElement("td");
-              c1.textContent = t.kind;
-              const c2 = document.createElement("td");
-              c2.textContent = t.title;
-              const c3 = document.createElement("td");
-              c3.style.fontSize = "0.75rem";
-              c3.style.color = "var(--muted)";
-              c3.textContent = t.createdAt;
-              tr.append(c0, c1, c2, c3);
-              tbody.appendChild(tr);
-            }
-            table.appendChild(tbody);
-            ticketsWrap.appendChild(table);
-          }
-        } catch (e) {
-          const p = document.createElement("p");
-          p.className = "empty";
-          p.textContent = "Could not load tickets: " + (e.message || e);
-          ticketsWrap.appendChild(p);
-        }
-
-        const wrap = document.getElementById("jobs-table");
-        wrap.textContent = "";
-        try {
-          const list = await fetchJson("/v1/git/jobs");
-          if (list.jobs.length === 0) {
-            const p = document.createElement("p");
-            p.className = "empty";
-            p.appendChild(document.createTextNode("No jobs yet. Use "));
-            const link = document.createElement("a");
-            link.href = "#agent";
-            link.textContent = "Agent — start here";
-            p.appendChild(link);
-            p.appendChild(document.createTextNode(" above, or "));
-            const code = document.createElement("span");
-            code.className = "mono";
-            code.textContent = "npm run cli -- scan <gitUrl>";
-            p.appendChild(code);
-            p.appendChild(document.createTextNode("."));
-            wrap.appendChild(p);
-          } else {
-            const table = document.createElement("table");
-            const thead = document.createElement("thead");
-            const hr = document.createElement("tr");
-            for (const h of ["ID", "Status", "URL", "Ref", "Created", "Actions"]) {
-              const th = document.createElement("th");
-              th.textContent = h;
-              hr.appendChild(th);
-            }
-            thead.appendChild(hr);
-            table.appendChild(thead);
-            const tbody = document.createElement("tbody");
-            for (const j of list.jobs) {
-              const tr = document.createElement("tr");
-              const c0 = document.createElement("td");
-              c0.className = "mono";
-              c0.textContent = j.jobId.slice(0, 8) + "…";
-              const c1 = document.createElement("td");
-              c1.textContent = j.status;
-              const c2 = document.createElement("td");
-              c2.className = "mono";
-              c2.textContent = j.gitUrl;
-              const c3 = document.createElement("td");
-              c3.textContent = j.ref || "—";
-              const c4 = document.createElement("td");
-              c4.style.fontSize = "0.75rem";
-              c4.style.color = "var(--muted)";
-              c4.textContent = j.createdAt;
-              const c5 = document.createElement("td");
-              c5.className = "job-actions";
-              if (j.status === "queued") {
-                const runBtn = document.createElement("button");
-                runBtn.type = "button";
-                runBtn.className = "btn-sm";
-                runBtn.textContent = "Run";
-                runBtn.addEventListener("click", () => runJobFromTable(j.jobId));
-                c5.appendChild(runBtn);
-              }
-              const viewBtn = document.createElement("button");
-              viewBtn.type = "button";
-              viewBtn.className = "btn-sm";
-              viewBtn.textContent = "View";
-              viewBtn.addEventListener("click", () => showJobResults(j.jobId));
-              c5.appendChild(viewBtn);
-              tr.append(c0, c1, c2, c3, c4, c5);
-              tbody.appendChild(tr);
-            }
-            table.appendChild(tbody);
-            wrap.appendChild(table);
-          }
-        } catch (e) {
-          const p = document.createElement("p");
-          p.className = "empty";
-          p.textContent = "Could not load jobs: " + (e.message || e);
-          wrap.appendChild(p);
-        }
-
-        const bh = document.getElementById("build-history");
-        bh.textContent = "";
-        try {
-          const hist = await fetchJson("/api/build-history");
-          const meta = document.createElement("p");
-          meta.className = "empty";
-          meta.style.marginTop = "0";
-          meta.textContent = hist.exists
-            ? String(hist.entryCount) +
-              " " +
-              (hist.entryCount === 1 ? "entry" : "entries") +
-              " in " +
-              hist.source
-            : "No " + hist.source + " on disk.";
-          bh.appendChild(meta);
-          const raw = document.createElement("a");
-          raw.href = "/BUILD_LOG.md";
-          raw.target = "_blank";
-          raw.rel = "noopener";
-          raw.textContent = "Open raw BUILD_LOG.md";
-          raw.style.display = "inline-block";
-          raw.style.marginBottom = "0.65rem";
-          bh.appendChild(raw);
-          if (hist.entries.length === 0) {
-            const hint = document.createElement("p");
-            hint.className = "empty";
-            hint.textContent = "Append a ## Build section using templates/BUILD_LOG.entry.template.md.";
-            bh.appendChild(hint);
-          }
-          for (const e of hist.entries) {
-            const det = document.createElement("details");
-            det.className = "history-entry";
-            const sum = document.createElement("summary");
-            sum.textContent = e.titleLine.replace(/^##\s+/, "");
-            det.appendChild(sum);
-            const block = document.createElement("div");
-            block.style.marginTop = "0.35rem";
-            if (e.acceptedAt) {
-              const line = document.createElement("div");
-              line.style.fontSize = "0.8rem";
-              line.style.color = "var(--muted)";
-              line.textContent = "Accepted: " + e.acceptedAt;
-              block.appendChild(line);
-            }
-            if (e.ticket) {
-              const line = document.createElement("div");
-              line.style.fontSize = "0.8rem";
-              line.className = "mono";
-              line.textContent = "Ticket: " + e.ticket;
-              block.appendChild(line);
-            }
-            if (e.summary) {
-              const p = document.createElement("p");
-              p.style.margin = "0.35rem 0 0";
-              p.style.fontSize = "0.9rem";
-              p.textContent = e.summary;
-              block.appendChild(p);
-            }
-            det.appendChild(block);
-            const pre = document.createElement("pre");
-            pre.className = "history-raw mono";
-            pre.textContent = e.raw;
-            det.appendChild(pre);
-            bh.appendChild(det);
-          }
-        } catch (e) {
-          const p = document.createElement("p");
-          p.className = "empty";
-          p.textContent = "Could not load build history: " + (e.message || e);
-          bh.appendChild(p);
-        }
-
-        document.getElementById("fetched").textContent = "Updated " + new Date().toLocaleTimeString();
-      }
-
-      document.getElementById("refresh").addEventListener("click", load);
-
-      document.querySelectorAll(".copy-cmd-block .copy-btn").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const id = btn.getAttribute("data-copy-for");
-          if (id === null) {
-            return;
-          }
-          const pre = document.getElementById(id);
-          if (pre === null) {
-            return;
-          }
-          const text = (pre.textContent ?? "").trim();
-          const label = btn.textContent;
-          try {
-            await navigator.clipboard.writeText(text);
-            btn.textContent = "Copied";
-            setTimeout(() => {
-              btn.textContent = label;
-            }, 1200);
-          } catch {
-            const range = document.createRange();
-            range.selectNodeContents(pre);
-            const sel = window.getSelection();
-            if (sel !== null) {
-              sel.removeAllRanges();
-              sel.addRange(range);
-            }
-            btn.textContent = "Selected — ⌘C";
-            setTimeout(() => {
-              btn.textContent = label;
-            }, 2000);
-          }
-        });
-      });
-
-      document.getElementById("ticket-create-pipeline").addEventListener("click", async () => {
-        const statusEl = document.getElementById("ticket-status");
-        const btn = document.getElementById("ticket-create-pipeline");
-        statusEl.textContent = "";
-        statusEl.classList.remove("ok", "err");
-        btn.disabled = true;
-        try {
-          const created = await postJson("/v1/tickets", {});
-          statusEl.classList.add("ok");
-          statusEl.textContent = "Created ticket " + created.ticketId + " — " + created.title;
-          await load();
-        } catch (err) {
-          statusEl.classList.add("err");
-          statusEl.textContent = String(err.message || err);
-        } finally {
-          btn.disabled = false;
-        }
-      });
-
-      document.getElementById("ticket-custom-form").addEventListener("submit", async (ev) => {
+      /* Scan form */
+      $("#scan-form").addEventListener("submit", async function (ev) {
         ev.preventDefault();
-        const statusEl = document.getElementById("ticket-status");
-        const btn = document.getElementById("ticket-create-custom");
-        const titleEl = document.getElementById("ticket-custom-title");
-        const bodyEl = document.getElementById("ticket-custom-body");
+        var statusEl = $("#scan-status");
         statusEl.textContent = "";
-        statusEl.classList.remove("ok", "err");
-        const title = titleEl.value.trim();
-        if (!title) {
-          statusEl.classList.add("err");
-          statusEl.textContent = "Enter a title.";
+        statusEl.className = "scan-status";
+        var gitUrl = $("#scan-url").value.trim();
+        var ref = $("#scan-ref").value.trim();
+        if (!gitUrl) {
+          statusEl.className = "scan-status err";
+          statusEl.textContent = "Enter a git remote URL.";
           return;
         }
-        btn.disabled = true;
+        var deferStart = $("#scan-defer").checked;
+        var payload = { gitUrl: gitUrl, deferStart: deferStart };
+        if (ref.length > 0) { payload.ref = ref; }
+        $("#scan-start").disabled = true;
         try {
-          const created = await postJson("/v1/tickets", {
-            kind: "custom",
-            title,
-            body: bodyEl.value.trim(),
-          });
-          statusEl.classList.add("ok");
-          statusEl.textContent = "Created ticket " + created.ticketId;
+          var created = await postJson("/v1/git/jobs", payload);
+          statusEl.className = "scan-status ok";
+          statusEl.textContent = "Queued " + created.jobId.slice(0, 8) + " \u2014 " + created.status;
+          expandedJobId = created.jobId;
+          expandedJobDetail = null;
+          await loadJobs();
+        } catch (e) {
+          statusEl.className = "scan-status err";
+          statusEl.textContent = String(e.message || e);
+        } finally {
+          $("#scan-start").disabled = false;
+        }
+      });
+
+      /* ─── Findings tab ─── */
+
+      function collectAllFindings() {
+        allFindings = [];
+        for (var j of jobsData) {
+          if (j.findingCount > 0) {
+            fetchJson("/v1/git/jobs/" + encodeURIComponent(j.jobId)).then(function (detail) {
+              if (Array.isArray(detail.findings)) {
+                for (var f of detail.findings) {
+                  if (!allFindings.some(function (x) { return x.findingId === f.findingId; })) {
+                    allFindings.push(Object.assign({}, f, {
+                      jobId: detail.jobId,
+                      gitUrl: detail.gitUrl,
+                      jobCreatedAt: detail.createdAt,
+                    }));
+                  }
+                }
+              }
+              renderFindings();
+            }).catch(function () {});
+          }
+        }
+        renderFindings();
+      }
+
+      var findingsConfFilter = "all";
+
+      $$("#findings-filter-bar .chip").forEach(function (chip) {
+        chip.addEventListener("click", function () {
+          findingsConfFilter = chip.dataset.conf;
+          $$("#findings-filter-bar .chip").forEach(function (c) { c.classList.toggle("active", c.dataset.conf === findingsConfFilter); });
+          renderFindings();
+        });
+      });
+
+      $("#findings-search").addEventListener("input", function () { renderFindings(); });
+
+      function renderFindings() {
+        var container = $("#findings-list");
+        container.textContent = "";
+        var search = ($("#findings-search").value || "").toLowerCase().trim();
+        var filtered = allFindings.filter(function (f) {
+          if (findingsConfFilter !== "all" && f.confidence !== findingsConfFilter) { return false; }
+          if (search.length > 0) {
+            var hay = (f.title + " " + f.evidencePath + " " + f.angle + " " + f.detail).toLowerCase();
+            if (hay.indexOf(search) === -1) { return false; }
+          }
+          return true;
+        });
+
+        filtered.sort(function (a, b) { return new Date(b.jobCreatedAt) - new Date(a.jobCreatedAt); });
+
+        if (filtered.length === 0) {
+          container.appendChild(el("div", { className: "findings-empty", textContent: allFindings.length === 0 ? "No findings yet. Run a scan to generate findings." : "No findings match the current filters." }));
+          return;
+        }
+
+        for (var f of filtered) {
+          container.appendChild(renderFindingCard(f, f));
+        }
+      }
+
+      function renderFindingCard(f, job) {
+        var card = el("div", { className: "finding-card" });
+        card.appendChild(el("h4", { textContent: f.title || "(no title)" }));
+        var meta = el("div", { className: "finding-meta" }, [
+          confBadge(f.confidence),
+          el("span", { className: "mono", textContent: f.evidencePath || "" }),
+        ]);
+        if (job && job.gitUrl) {
+          meta.appendChild(el("span", { textContent: "\u00B7" }));
+          meta.appendChild(el("span", { className: "mono text-sm", textContent: job.gitUrl.replace(/.*\//, "").replace(/\.git$/, "") }));
+        }
+        card.appendChild(meta);
+        if (f.angle) {
+          card.appendChild(el("div", { className: "angle", textContent: f.angle }));
+        }
+        if (f.detail) {
+          card.appendChild(el("div", { className: "detail", textContent: f.detail }));
+        }
+        return card;
+      }
+
+      /* ─── Tickets tab ─── */
+
+      var ticketsTable = makeSortableTable("tickets-table",
+        [
+          { key: "kind", label: "Kind", sortFn: function (a, b) { return a.kind.localeCompare(b.kind); } },
+          { key: "title", label: "Title", sortFn: function (a, b) { return a.title.localeCompare(b.title); } },
+          { key: "status", label: "Status" },
+          { key: "createdAt", label: "Created", sortFn: function (a, b) { return new Date(a.createdAt) - new Date(b.createdAt); } },
+        ],
+        function () { return ticketsData; },
+        function (t) {
+          var tr = el("tr");
+          tr.appendChild(el("td", { textContent: t.kind }));
+          var titleTd = el("td", { textContent: t.title });
+          titleTd.title = t.body || "";
+          tr.appendChild(titleTd);
+          tr.appendChild(el("td", {}, [statusBadge(t.status === "open" ? "queued" : t.status)]));
+          tr.appendChild(el("td", { className: "text-muted text-sm", textContent: relativeTime(t.createdAt), title: t.createdAt }));
+          return tr;
+        },
+        { defaultSort: "createdAt", defaultAsc: false, emptyText: "No tickets yet." }
+      );
+
+      $("#ticket-pipeline-btn").addEventListener("click", async function () {
+        var statusEl = $("#ticket-status");
+        statusEl.textContent = "";
+        statusEl.className = "ticket-status";
+        this.disabled = true;
+        try {
+          var created = await postJson("/v1/tickets", {});
+          statusEl.className = "ticket-status ok";
+          statusEl.textContent = "Created: " + created.title;
+          await loadTickets();
+        } catch (e) {
+          statusEl.className = "ticket-status err";
+          statusEl.textContent = String(e.message || e);
+        } finally {
+          this.disabled = false;
+        }
+      });
+
+      $("#ticket-custom-form").addEventListener("submit", async function (ev) {
+        ev.preventDefault();
+        var statusEl = $("#ticket-status");
+        var titleEl = $("#ticket-title");
+        var bodyEl = $("#ticket-body");
+        statusEl.textContent = "";
+        statusEl.className = "ticket-status";
+        var title = titleEl.value.trim();
+        if (!title) {
+          statusEl.className = "ticket-status err";
+          statusEl.textContent = "Title required.";
+          return;
+        }
+        try {
+          var created = await postJson("/v1/tickets", { kind: "custom", title: title, body: bodyEl.value.trim() });
+          statusEl.className = "ticket-status ok";
+          statusEl.textContent = "Created: " + created.ticketId.slice(0, 8);
           titleEl.value = "";
           bodyEl.value = "";
-          await load();
-        } catch (err) {
-          statusEl.classList.add("err");
-          statusEl.textContent = String(err.message || err);
-        } finally {
-          btn.disabled = false;
+          await loadTickets();
+        } catch (e) {
+          statusEl.className = "ticket-status err";
+          statusEl.textContent = String(e.message || e);
         }
       });
 
-      function getAgentStartButtons() {
-        return ["agent-start", "agent-start-top"]
-          .map((id) => document.getElementById(id))
-          .filter((el) => el instanceof HTMLButtonElement);
+      async function loadTickets() {
+        try {
+          var list = await fetchJson("/v1/tickets");
+          ticketsData = list.tickets;
+          ticketsTable.render();
+        } catch { /* ignore */ }
       }
 
-      document.getElementById("agent-form").addEventListener("submit", async (ev) => {
-        ev.preventDefault();
-        const statusEl = document.getElementById("agent-status");
-        const startBtns = getAgentStartButtons();
-        statusEl.textContent = "";
-        statusEl.classList.remove("ok", "err");
-        const gitUrlInput = document.getElementById("agent-git-url");
-        const refInput = document.getElementById("agent-ref");
-        const gitUrl = gitUrlInput.value.trim();
-        const refRaw = refInput.value.trim();
-        if (!gitUrl) {
-          statusEl.classList.add("err");
-          statusEl.textContent = "Enter a git remote URL.";
-          gitUrlInput.focus();
-          return;
-        }
-        const deferEl = document.getElementById("agent-defer-start");
-        const deferStart = deferEl instanceof HTMLInputElement && deferEl.checked;
-        const payload =
-          refRaw.length > 0 ? { gitUrl, ref: refRaw, deferStart } : { gitUrl, deferStart };
-        for (const b of startBtns) {
-          b.disabled = true;
-        }
-        try {
-          const created = await postJson("/v1/git/jobs", payload);
-          statusEl.classList.add("ok");
-          statusEl.textContent =
-            "Queued job " +
-            created.jobId +
-            " — status " +
-            created.status +
-            ". Refreshing list…";
-          await load();
-          statusEl.textContent =
-            "Queued job " + created.jobId + " — status " + created.status + ". See it in the table below.";
-        } catch (err) {
-          statusEl.classList.add("err");
-          statusEl.textContent = String(err.message || err);
-        } finally {
-          for (const b of startBtns) {
-            b.disabled = false;
-          }
-        }
-      });
+      /* ─── System tab ─── */
 
-      load();
+      async function loadSystem() {
+        try {
+          await fetchJson("/health");
+          $("#health-dot").classList.add("ok");
+          $("#health-dot").classList.remove("err");
+          $("#sys-health").textContent = "OK";
+          $("#sys-health").style.color = "var(--ok)";
+        } catch (e) {
+          $("#health-dot").classList.add("err");
+          $("#health-dot").classList.remove("ok");
+          $("#sys-health").textContent = "Error: " + (e.message || e);
+          $("#sys-health").style.color = "var(--err)";
+        }
+
+        try {
+          var info = await fetchJson("/api/info");
+          $("#header-version").textContent = "v" + info.version;
+
+          var a = info.llm && info.llm.anthropic;
+          if (a) {
+            var llmText = a.configured ? "API key set" : "not configured";
+            $("#header-llm").textContent = "LLM: " + llmText;
+            $("#sys-llm").innerHTML = "";
+            $("#sys-llm").appendChild(el("div", { textContent: a.configured ? "API key configured" : "Not configured (ANTHROPIC_API_KEY unset)" }));
+            $("#sys-llm").appendChild(el("div", { className: "mono text-sm text-muted", textContent: a.baseUrl }));
+          }
+
+          $("#sys-counts").innerHTML = "";
+          $("#sys-counts").appendChild(el("div", { textContent: info.jobsRegistered + " scan jobs" }));
+          $("#sys-counts").appendChild(el("div", { textContent: (info.implementationTicketsOpen || 0) + " tickets open" }));
+
+          var b = info.build;
+          if (b) {
+            $("#build-display").textContent = b.displayLine;
+            $("#build-audience").textContent = b.audienceNote;
+            var bits = [];
+            if (b.gitCommit) { bits.push("Commit " + b.gitCommit); }
+            if (b.buildId) { bits.push("Build " + b.buildId); }
+            bits.push("Node " + b.nodeVersion);
+            bits.push(b.environment);
+            $("#build-extra").textContent = bits.join(" \u00B7 ");
+          }
+
+          var impl = $("#sys-implemented");
+          impl.innerHTML = "";
+          for (var item of info.implemented) {
+            var text = item.name;
+            if (item.path) { text += " \u2014 " + (item.method ? item.method + " " : "") + item.path; }
+            else if (item.hint) { text += " \u2014 " + item.hint; }
+            impl.appendChild(el("li", { textContent: text }));
+          }
+
+          var ni = $("#sys-not-implemented");
+          ni.innerHTML = "";
+          for (var item2 of info.notImplemented) {
+            ni.appendChild(el("li", {}, [
+              el("strong", { textContent: item2.name }),
+              document.createTextNode(" \u2014 " + item2.detail),
+            ]));
+          }
+
+          var docs = $("#sys-docs");
+          docs.innerHTML = "";
+          for (var d of info.repositoryDocs) {
+            docs.appendChild(el("a", { href: d.href, target: "_blank", rel: "noopener", textContent: d.label }));
+          }
+        } catch { /* ignore */ }
+
+        try {
+          var hist = await fetchJson("/api/build-history");
+          var bh = $("#build-history");
+          bh.innerHTML = "";
+          if (hist.entries.length === 0) {
+            bh.appendChild(el("p", { className: "empty", textContent: "No entries yet." }));
+          }
+          for (var entry of hist.entries) {
+            var det = el("details", { className: "history-entry" });
+            det.appendChild(el("summary", { textContent: entry.titleLine.replace(/^##\s+/, "") }));
+            var block = el("div", { style: { marginTop: "0.3rem" } });
+            if (entry.acceptedAt) {
+              block.appendChild(el("div", { className: "text-muted text-sm", textContent: "Accepted: " + entry.acceptedAt }));
+            }
+            if (entry.ticket) {
+              block.appendChild(el("div", { className: "mono text-sm", textContent: "Ticket: " + entry.ticket }));
+            }
+            if (entry.summary) {
+              block.appendChild(el("p", { textContent: entry.summary, style: { fontSize: "0.85rem", margin: "0.3rem 0 0" } }));
+            }
+            det.appendChild(block);
+            det.appendChild(el("pre", { className: "history-raw mono", textContent: entry.raw }));
+            bh.appendChild(det);
+          }
+        } catch { /* ignore */ }
+      }
+
+      /* ─── Initial load ─── */
+
+      async function loadAll() {
+        await Promise.all([loadSystem(), loadJobs(), loadTickets()]);
+        $("#header-updated").textContent = new Date().toLocaleTimeString();
+      }
+
+      loadAll();
+
+      /* Periodic timestamp refresh */
+      setInterval(function () {
+        $$("td[title]").forEach(function (td) {
+          if (td.title && td.title.match(/^\d{4}/)) {
+            td.textContent = relativeTime(td.title);
+          }
+        });
+      }, 15000);
+    })();
     </script>
   </body>
 </html>

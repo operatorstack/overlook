@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { completeAnthropicUserMessage } from "../llm/anthropicMessages.js";
-import { getAnthropicEnv, getAnthropicModel } from "../llm/anthropicEnv.js";
+import { getAnthropicEnv, resolveAnthropicModel } from "../llm/anthropicEnv.js";
 import type { ReviewUnit, ScanFinding } from "./types.js";
 
 const MAX_UNITS_IN_PROMPT = 14;
@@ -8,17 +8,41 @@ const MAX_UNIT_CHARS_IN_PROMPT = 3200;
 const MAX_USER_PROMPT_CHARS = 120_000;
 const MAX_OUTPUT_TOKENS = 8192;
 
-const SYSTEM_PROMPT = `You are assisting an automated code scan. Respond with ONLY a JSON array (no markdown fences, no commentary). Each element must be an object with:
-- title: short string
-- angle: string (novelty or technical angle)
+const SYSTEM_PROMPT = `You are a technical research scanner. Your job is to surface things a curious engineer would find genuinely interesting, surprising, or worth writing about — the kind of observation that makes someone say "huh, that's clever" or "I didn't know you could do that."
+
+You are NOT a linter, security scanner, or code reviewer. Skip all of the following:
+- Generic security warnings (permissions, secrets handling, token scoping)
+- Style or lint issues (naming, formatting, missing types)
+- Obvious best-practice violations any junior dev would catch
+- Boilerplate observations ("this file exports a function")
+- Standard dependency or config concerns
+
+What DOES count as a finding:
+- Unusual or surprising architecture decisions and why they might exist
+- Clever patterns, idioms, or techniques worth learning from
+- Non-obvious tradeoffs the author made (and what they reveal about constraints)
+- Subtle interactions between components that aren't apparent at first glance
+- Creative solutions to hard problems
+- Things that hint at the codebase's "philosophy" or design lineage
+
+Confidence calibration:
+- high: "I'd share this in a team channel — people would find it interesting"
+- medium: "Worth a closer look, there's something going on here"
+- low: "Mildly curious, might be interesting in context"
+
+Prefer FEWER, BETTER findings. An empty array [] is the correct answer if nothing is genuinely novel. Three strong observations beat ten mediocre ones.
+
+Respond with ONLY a JSON array (no markdown fences, no commentary). Each element must be an object with:
+- title: short string (framed as what makes it interesting, not what's wrong)
+- angle: string (the novel or curious technical angle — what makes this worth noticing)
 - evidencePath: string (must match one of the input paths exactly)
 - confidence: exactly one of "low", "medium", "high"
-- detail: string (1-3 sentences, grounded in the excerpt)
+- detail: string (1-3 sentences, grounded in the excerpt, explaining why this is interesting)
 
-Use an empty array [] if there is nothing worth flagging. Do not invent file paths.`;
+Do not invent file paths.`;
 
 export type AnalyzeReviewUnitsResult =
-  | { ok: true; findings: ScanFinding[]; skipped: boolean; skipReason?: string }
+  | { ok: true; findings: ScanFinding[]; skipped: boolean; skipReason?: string; modelUsed?: string }
   | { ok: false; error: string };
 
 function isConfidence(value: unknown): value is ScanFinding["confidence"] {
@@ -122,7 +146,7 @@ export async function analyzeReviewUnits(input: {
   const allowedPaths = new Set(input.reviewUnits.map((u) => u.path));
   const user = buildUserPrompt(input.reviewUnits, input.reviewUnitScanTruncated);
 
-  const model = getAnthropicModel();
+  const model = resolveAnthropicModel();
   const completion = await completeAnthropicUserMessage({
     baseUrl: env.baseUrl,
     apiKey: env.apiKey,
@@ -144,5 +168,5 @@ export async function analyzeReviewUnits(input: {
     };
   }
 
-  return { ok: true, findings, skipped: false };
+  return { ok: true, findings, skipped: false, modelUsed: model };
 }

@@ -38,4 +38,6 @@ export type GitScanJob = {
   reviewUnitScanTruncated?: boolean;
   findings?: ScanFinding[];
   analyzeSkipped?: boolean;
+  /** Model ID used for the analyze stage (sensor: cost/capacity traceability). */
+  modelUsed?: string;
 };
