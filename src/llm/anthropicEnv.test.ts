@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getAnthropicEnv, getAnthropicModel } from "./anthropicEnv.js";
+import { getAnthropicEnv, resolveAnthropicModel } from "./anthropicEnv.js";
+import { getAgentConfig } from "../agent/config.js";
 
 describe("getAnthropicEnv", () => {
   afterEach(() => {
@@ -32,18 +33,35 @@ describe("getAnthropicEnv", () => {
   });
 });
 
-describe("getAnthropicModel", () => {
+describe("resolveAnthropicModel", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it("defaults when ANTHROPIC_MODEL unset", () => {
+  it("returns agent config default when no env override and no mode", () => {
     vi.stubEnv("ANTHROPIC_MODEL", "");
-    expect(getAnthropicModel()).toBe("claude-3-5-haiku-20241022");
+    const cfg = getAgentConfig();
+    expect(resolveAnthropicModel()).toBe(cfg.defaultModel);
   });
 
-  it("uses trimmed ANTHROPIC_MODEL when set", () => {
+  it("returns agent config mode model when no env override", () => {
+    vi.stubEnv("ANTHROPIC_MODEL", "");
+    const cfg = getAgentConfig();
+    expect(resolveAnthropicModel("deep-dive")).toBe(cfg.modeModels["deep-dive"].modelId);
+  });
+
+  it("env override wins over agent config default", () => {
+    vi.stubEnv("ANTHROPIC_MODEL", "claude-override");
+    expect(resolveAnthropicModel()).toBe("claude-override");
+  });
+
+  it("env override wins over agent config mode model", () => {
+    vi.stubEnv("ANTHROPIC_MODEL", "claude-override");
+    expect(resolveAnthropicModel("deep-dive")).toBe("claude-override");
+  });
+
+  it("trims whitespace from env override", () => {
     vi.stubEnv("ANTHROPIC_MODEL", "  claude-test  ");
-    expect(getAnthropicModel()).toBe("claude-test");
+    expect(resolveAnthropicModel()).toBe("claude-test");
   });
 });

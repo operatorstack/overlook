@@ -82,6 +82,7 @@ async function runGitScanIngest(jobId: string): Promise<void> {
       status: "done",
       findings: analyzeResult.findings,
       analyzeSkipped: analyzeResult.skipped,
+      modelUsed: analyzeResult.modelUsed,
       agentNote: doneNote,
     });
     await persistTerminalJobById(jobId);

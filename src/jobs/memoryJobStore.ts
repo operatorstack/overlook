@@ -33,6 +33,7 @@ export function patchGitScanJob(
       | "reviewUnitScanTruncated"
       | "findings"
       | "analyzeSkipped"
+      | "modelUsed"
     >
   >,
 ): GitScanJob | undefined {

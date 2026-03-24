@@ -78,7 +78,7 @@ describe("analyzeReviewUnits", () => {
     expect(result.skipReason).toContain("ANTHROPIC_API_KEY");
   });
 
-  it("calls Anthropic when configured and stores parsed findings", async () => {
+  it("calls Anthropic when configured and stores parsed findings with modelUsed", async () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
     const payload = {
       content: [
@@ -104,6 +104,8 @@ describe("analyzeReviewUnits", () => {
     expect(result.skipped).toBe(false);
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0].title).toBe("Note");
+    expect(typeof result.modelUsed).toBe("string");
+    expect(result.modelUsed!.length).toBeGreaterThan(0);
     expect(globalThis.fetch).toHaveBeenCalled();
   });
 });

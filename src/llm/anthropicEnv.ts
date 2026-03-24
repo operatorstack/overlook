@@ -1,3 +1,5 @@
+import { getAgentModelForMode, type OperatingMode } from "../agent/config.js";
+
 const DEFAULT_BASE = "https://api.anthropic.com";
 
 function pick(value: string | undefined): string | undefined {
@@ -27,10 +29,15 @@ export function getAnthropicEnv(): AnthropicEnvSnapshot {
   };
 }
 
-export function getAnthropicModel(): string {
-  const m = pick(process.env.ANTHROPIC_MODEL);
-  if (m !== undefined) {
-    return m;
+/**
+ * Resolve the model ID for an LLM call.
+ * Priority: ANTHROPIC_MODEL env override > agent package config for the mode > agent default.
+ * Spec: docs/agentic-subsystem.md § Prompting & LLM call boundaries.
+ */
+export function resolveAnthropicModel(mode?: OperatingMode): string {
+  const envOverride = pick(process.env.ANTHROPIC_MODEL);
+  if (envOverride !== undefined) {
+    return envOverride;
   }
-  return "claude-3-5-haiku-20241022";
+  return getAgentModelForMode(mode);
 }

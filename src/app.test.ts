@@ -7,10 +7,10 @@ describe("static UI", () => {
 
   it("GET / serves dashboard HTML", async () => {
     const res = await request(app).get("/").expect(200);
-    expect(res.text).toContain("Overlook server");
+    expect(res.text).toContain("Overlook");
     expect(res.text).toContain("/api/info");
-    expect(res.text).toContain("Agent — start here");
     expect(res.text).toContain("Start scan");
-    expect(res.text).toContain("Build the agent — ticket system");
+    expect(res.text).toContain("/v1/git/jobs");
+    expect(res.text).toContain("/v1/tickets");
   });
 });

@@ -61,6 +61,9 @@ function gitJobJson(job: GitScanJob, options?: { listItem?: boolean }) {
       }
     }
   }
+  if (job.modelUsed !== undefined) {
+    row.modelUsed = job.modelUsed;
+  }
   return row;
 }
 
