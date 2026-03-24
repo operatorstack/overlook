@@ -3,6 +3,7 @@
 A self-improving code scanner that surfaces **novel, blog-worthy technical angles** humans may have missed — not security lint, not style warnings, not things any static analyzer would catch. It scans AI-generated (or any) code repositories and looks for what's genuinely interesting: unusual architecture decisions, clever patterns, non-obvious tradeoffs, techniques worth learning from.
 
 The system runs a negative-feedback loop: scan, measure, propose improvements, human review. Nothing changes automatically.
+![Uploading image.png…]()
 
 ## Quick start
 
